@@ -342,6 +342,7 @@ function App() {
                 <div className="sin-progress"><span>罪证 {sessionSinQuestions[sinStep].slot} / {sessionSinQuestions.length} · {sessionSinQuestions[sinStep].group}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
                 <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context} · {sessionSinQuestions[sinStep].eyebrow}</p>
                 <h2>{sessionSinQuestions[sinStep].title}</h2><p>{sessionSinQuestions[sinStep].description}</p>
+                <p className="sin-single"><b>单选</b>只能选一个答案，点击后直接进入下一题</p>
                 <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
               </div>
             )}
