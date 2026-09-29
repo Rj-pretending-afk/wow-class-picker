@@ -11,6 +11,7 @@ import type { Answers, RankedSpec, SinKey } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
+const formatMetric = (value: number) => value.toFixed(1)
 
 function App() {
   const [screen, setScreen] = useState<Screen>('start')
@@ -194,7 +195,7 @@ function App() {
           <section className="atlas-screen">
             <div className="atlas-heading">
               <div><p className="kicker">至暗之夜 12.x · 体验档案</p><h1>全天赋六维评分</h1></div>
-              <p>数值为职业选择用途的编辑评分：5 表示要求更多、上限更高或能力更强，不代表当前版本输出强度。</p>
+              <p>数值采用 0.0—9.0 的九分制，并细分到 0.1：9.0 表示要求更多、上限更高或能力更强，不代表当前版本输出强度。</p>
             </div>
             <div className="atlas-toolbar">
               <div className="atlas-tabs" role="tablist" aria-label="评分类型">
@@ -210,7 +211,7 @@ function App() {
                     <div className="atlas-card-heading"><div><span>{spec.className}</span><h2>{spec.specName}</h2></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}</small></div>
                     <p>{spec.summary}</p>
                     <RadarChart values={spec.metrics} color={spec.color} label={`${spec.className}${spec.specName}`} />
-                    <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{spec.metrics[key]}</b></span>)}</div>
+                    <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(spec.metrics[key])}</b></span>)}</div>
                   </article>
                 ))}
               </div>
@@ -221,7 +222,7 @@ function App() {
                     <div className="atlas-card-heading"><div><span>{profile.armor}职业</span><h2>{profile.name}</h2></div><small>{specs.filter((spec) => spec.className === profile.name).length} 个专精</small></div>
                     <p>{profile.intro} {profile.identity}</p>
                     <RadarChart values={getClassRadar(profile.name)} color={profile.color} label={`${profile.name}职业`} />
-                    <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{getClassRadar(profile.name)[key]}</b></span>)}</div>
+                    <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(getClassRadar(profile.name)[key])}</b></span>)}</div>
                   </article>
                 ))}
               </div>
@@ -266,7 +267,7 @@ function App() {
             <div className="modal-copy-block class-copy"><span>职业介绍</span><p>{classProfileMap.get(selected.className)?.intro} {classProfileMap.get(selected.className)?.identity}</p></div>
             <div className="modal-axis"><div><span>颜值契合</span><b>{selected.looksMatch}%</b></div><div><span>手感契合</span><b>{selected.feelMatch}%</b></div></div>
             <div className="caution-box"><span>选择前留意</span><p>{selected.caution}</p></div>
-            <div className="metric-grid">{radarMetrics.map(({ key, label }) => <div key={key}><span>{label}</span><div className="metric-dots" aria-label={`${label} ${selected.metrics[key]}/5`}>{[1,2,3,4,5].map((dot) => <i className={dot <= selected.metrics[key] ? 'active' : ''} key={dot} />)}</div></div>)}</div>
+            <div className="metric-grid">{radarMetrics.map(({ key, label }) => <div key={key}><span className="metric-value"><span>{label}</span><b>{formatMetric(selected.metrics[key])} / 9</b></span><div className="metric-track" role="meter" aria-label={`${label} ${formatMetric(selected.metrics[key])}/9`} aria-valuenow={selected.metrics[key]} aria-valuemin={0} aria-valuemax={9}><i style={{ width:`${selected.metrics[key] / 9 * 100}%` }} /></div></div>)}</div>
             <button className="primary-button full" type="button" onClick={() => setSelected(null)}>了解了</button>
           </section>
         </div>

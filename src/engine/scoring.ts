@@ -50,8 +50,8 @@ function optionFit(spec: SpecProfile, question: Question, optionId: string) {
   Object.entries(effect.metrics ?? {}).forEach(([key, target]) => {
     const metric = key as MetricKey
     const distance = Math.abs(spec.metrics[metric] - Number(target))
-    signals.push(Math.max(.1, 1 - distance * .22))
-    if (distance <= 1) reason = `${metricLabels[metric]}与你期待的程度相符`
+    signals.push(Math.max(.1, 1 - distance * .11))
+    if (distance <= 2.1) reason = `${metricLabels[metric]}与你期待的程度相符`
   })
 
   if (!signals.length) return { fit: .66, reason: '', ignored: false }

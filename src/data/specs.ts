@@ -54,7 +54,7 @@ const raw: RawSpec[] = [
 ]
 
 // 12.x（至暗之夜）校准：上手难度、操作上限、团队功能。
-// 评分来自 2026-09 对正式服职业指南、重做说明与当前循环的编辑评估；5 代表更多要求/更高上限/更多工具，并非强度排名。
+// 评分来自 2026-09 对正式服职业指南、重做说明与当前循环的编辑评估；9 代表更多要求/更高上限/更多工具，并非强度排名。
 const skillScores: Record<string, [number, number, number]> = {
   'blood-dk':[3,5,4], 'frost-dk':[2,4,2], 'unholy-dk':[4,5,3],
   'havoc-dh':[3,5,3], 'vengeance-dh':[3,5,4], 'devourer-dh':[2,4,3],
@@ -71,9 +71,26 @@ const skillScores: Record<string, [number, number, number]> = {
   'arms-warrior':[2,4,3], 'fury-warrior':[1,3,3], 'protection-warrior':[3,5,4],
 }
 
+const ninePointAnchors = [0, 1.5, 3.2, 5, 7.1, 9]
+const toNinePoint = (value: number) => {
+  const lower = Math.max(0, Math.min(5, Math.floor(value)))
+  const upper = Math.max(0, Math.min(5, Math.ceil(value)))
+  if (lower === upper) return ninePointAnchors[lower]
+  const interpolated = ninePointAnchors[lower] + (ninePointAnchors[upper] - ninePointAnchors[lower]) * (value - lower)
+  return Number(interpolated.toFixed(1))
+}
+
 export const specs: SpecProfile[] = raw.map(([id, className, specName, role, range, values, tagString, fantasy, summary, caution]) => {
   const [armor, color] = classes[className]
   const [pace, legacyComplexity, mobility, survivability, burst, sustained] = values
   const [difficulty, ceiling, utility] = skillScores[id] ?? [legacyComplexity, Math.min(5, legacyComplexity + 1), 3]
-  return { id, className, specName, role, range, armor, color, metrics: { pace, difficulty, ceiling, mobility, survivability, utility, burst, sustained }, tags: tagString.split(' '), fantasy, summary, caution }
+  return {
+    id, className, specName, role, range, armor, color,
+    metrics: {
+      pace: toNinePoint(pace), difficulty: toNinePoint(difficulty), ceiling: toNinePoint(ceiling),
+      mobility: toNinePoint(mobility), survivability: toNinePoint(survivability), utility: toNinePoint(utility),
+      burst: toNinePoint(burst), sustained: toNinePoint(sustained),
+    },
+    tags: tagString.split(' '), fantasy, summary, caution,
+  }
 })

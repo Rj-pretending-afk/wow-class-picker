@@ -14,10 +14,12 @@ interface RadarChartProps {
 const centerX = 160
 const centerY = 140
 const radius = 88
+const maxScore = 9
+const formatScore = (value: number) => value.toFixed(1)
 
-const pointAt = (index: number, value = 5) => {
+const pointAt = (index: number, value = maxScore) => {
   const angle = -Math.PI / 2 + index * (Math.PI * 2 / radarMetrics.length)
-  const distance = radius * (value / 5)
+  const distance = radius * (value / maxScore)
   return [centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance]
 }
 
@@ -25,12 +27,12 @@ const polygon = (values: number[]) => values.map((value, index) => pointAt(index
 
 export function RadarChart({ values, color, label, compact = false }: RadarChartProps) {
   const titleId = useId()
-  const summary = radarMetrics.map(({ key, label: metricLabel }) => `${metricLabel} ${values[key]}/5`).join('，')
+  const summary = radarMetrics.map(({ key, label: metricLabel }) => `${metricLabel} ${formatScore(values[key])}/9`).join('，')
   return (
     <figure className={compact ? 'radar-chart compact' : 'radar-chart'} style={{ '--radar-color': color } as CSSProperties}>
       <svg viewBox="0 0 320 286" role="img" aria-labelledby={titleId}>
         <title id={titleId}>{label}六维评分：{summary}</title>
-        {[1, 2, 3, 4, 5].map((level) => <polygon className="radar-grid" points={polygon(Array(6).fill(level))} key={level} />)}
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => <polygon className={level % 3 === 0 ? 'radar-grid major' : 'radar-grid'} points={polygon(Array(6).fill(level))} key={level} />)}
         {radarMetrics.map((metric, index) => {
           const [x, y] = pointAt(index)
           return <line className="radar-axis" x1={centerX} y1={centerY} x2={x} y2={y} key={metric.key} />
@@ -45,7 +47,7 @@ export function RadarChart({ values, color, label, compact = false }: RadarChart
           const x = centerX + Math.cos(angle) * 125
           const y = centerY + Math.sin(angle) * 112
           const anchor = Math.cos(angle) > .25 ? 'start' : Math.cos(angle) < -.25 ? 'end' : 'middle'
-          return <text className="radar-label" x={x} y={y} textAnchor={anchor} dominantBaseline="middle" key={key}>{metricLabel} {values[key]}</text>
+          return <text className="radar-label" x={x} y={y} textAnchor={anchor} dominantBaseline="middle" key={key}>{metricLabel} {formatScore(values[key])}</text>
         })}
       </svg>
     </figure>
