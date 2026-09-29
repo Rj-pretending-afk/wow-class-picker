@@ -84,18 +84,13 @@ export interface IndifferenceSummary {
 
 export type SinKey = 'pride' | 'greed' | 'lust' | 'envy' | 'wrath' | 'gluttony' | 'sloth'
 
-export interface SinOption {
-  id: string
-  label: string
-  hint: string
+// 七宗罪选项同时携带罪名分与玩法信号，推荐复用正式测试的评分引擎。
+export interface SinOption extends QuestionOption {
   scores: Partial<Record<SinKey, number>>
 }
 
-export interface SinQuestion {
-  id: string
+export interface SinQuestion extends Question {
   context: '团本' | '地下城' | 'PvP' | '日常' | '家园' | '社交'
-  title: string
-  description: string
   options: SinOption[]
 }
 
@@ -104,6 +99,6 @@ export interface SinProfile {
   name: string
   alias: string
   verdict: string
+  playstyle: string
   confession: string
-  specs: string[]
 }

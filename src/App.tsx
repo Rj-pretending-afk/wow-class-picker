@@ -9,13 +9,12 @@ import { radarMetrics } from './data/radar'
 import { createSinQuestionSet, sinProfiles, sinQuestions } from './data/sins'
 import { specs } from './data/specs'
 import { getClassRadar, getIndifferenceSummary, getRangeLabel, getRoleLabel, getSpecRecommendations, rankClasses } from './engine/scoring'
-import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey } from './types'
+import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey, SinOption } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
 type SortDirection = 'desc' | 'asc'
 const formatMetric = (value: number) => value.toFixed(1)
-const findSpecByLabel = (label: string) => specs.find((spec) => spec.specName + spec.className === label)
 const getSpecIntro = (spec: (typeof specs)[number]) => `${spec.specName}是${getRoleLabel(spec.role)}专精，主要在${getRangeLabel(spec.range)}作战。${spec.fantasy}`
 const getClassIntro = (className: string) => {
   const profile = classProfileMap.get(className)
@@ -40,7 +39,7 @@ function App() {
   const [atlasPick, setAtlasPick] = useState(classProfiles[1].name)
   const [sinStage, setSinStage] = useState<SinStage>('intro')
   const [sinStep, setSinStep] = useState(0)
-  const [sinScores, setSinScores] = useState<Partial<Record<SinKey, number>>>({})
+  const [sinAnswers, setSinAnswers] = useState<Answers>({})
   const [sessionSinQuestions, setSessionSinQuestions] = useState(createSinQuestionSet)
   const question = sessionQuestions[step]
   const results = useMemo(() => getSpecRecommendations(answers, sessionQuestions), [answers, sessionQuestions])
@@ -79,7 +78,25 @@ function App() {
     return current.filter((item) => item.key !== key)
   })
   const pickedProfile = classProfileMap.get(atlasPick) ?? classProfiles[0]
-  const sinResult = useMemo(() => [...sinProfiles].sort((a, b) => (sinScores[b.key] ?? 0) - (sinScores[a.key] ?? 0))[0], [sinScores])
+  // 七宗罪：罪名分来自所选项的 scores；专精与职业推荐复用正式测试的评分引擎，数量与正式结果一致。
+  const sinScores = useMemo(() => {
+    const totals: Partial<Record<SinKey, number>> = {}
+    sessionSinQuestions.forEach((item) => {
+      const option = item.options.find((candidate) => candidate.id === sinAnswers[item.id]?.[0])
+      Object.entries(option?.scores ?? {}).forEach(([key, value]) => { totals[key as SinKey] = (totals[key as SinKey] ?? 0) + Number(value) })
+    })
+    return totals
+  }, [sinAnswers, sessionSinQuestions])
+  const sinRanking = useMemo(() => {
+    const total = Object.values(sinScores).reduce((sum, value) => sum + (value ?? 0), 0)
+    return [...sinProfiles]
+      .map((profile) => ({ ...profile, share: total ? Math.round((sinScores[profile.key] ?? 0) / total * 100) : 0 }))
+      .sort((a, b) => b.share - a.share)
+  }, [sinScores])
+  // 并列第一时同时显示多个罪名；全部选“我无所谓”时归为懒惰。
+  const sinLeaders = sinRanking[0].share ? sinRanking.filter((profile) => profile.share === sinRanking[0].share).slice(0, 3) : [sinRanking.find((profile) => profile.key === 'sloth') ?? sinRanking[0]]
+  const sinSpecResults = useMemo(() => getSpecRecommendations(sinAnswers, sessionSinQuestions), [sinAnswers, sessionSinQuestions])
+  const sinClassResults = useMemo(() => rankClasses(sinAnswers, sessionSinQuestions).slice(0, 5), [sinAnswers, sessionSinQuestions])
 
   const looksDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'looks').length
   const feelDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'feel').length
@@ -101,14 +118,11 @@ function App() {
   const goBack = () => step === 0 ? setScreen('start') : setStep((current) => current - 1)
   const restart = () => { setSelected(null); setAnswers({}); setStep(0); setScreen('start') }
   const openAtlas = () => { setSelected(null); setScreen('atlas') }
-  const openEaster = () => { setSinStage('intro'); setSinStep(0); setSinScores({}); setScreen('easter') }
-  const beginSin = () => { setSessionSinQuestions(createSinQuestionSet()); setSinStage('quiz'); setSinStep(0); setSinScores({}) }
-  const answerSin = (scores: Partial<Record<SinKey, number>>) => {
-    setSinScores((current) => {
-      const next = { ...current }
-      Object.entries(scores).forEach(([key, value]) => { next[key as SinKey] = (next[key as SinKey] ?? 0) + Number(value) })
-      return next
-    })
+  const openEaster = () => { setSinStage('intro'); setSinStep(0); setSinAnswers({}); setScreen('easter') }
+  const beginSin = () => { setSessionSinQuestions(createSinQuestionSet()); setSinStage('quiz'); setSinStep(0); setSinAnswers({}) }
+  const answerSin = (option: SinOption) => {
+    const current = sessionSinQuestions[sinStep]
+    setSinAnswers((answered) => ({ ...answered, [current.id]: [option.id] }))
     if (sinStep === sessionSinQuestions.length - 1) setSinStage('result')
     else setSinStep((current) => current + 1)
   }
@@ -322,20 +336,31 @@ function App() {
 
         {screen === 'easter' && (
           <section className="sin-screen">
-            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不正经 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">每轮从 {sinQuestions.length} 份罪证抽取 12 题，横跨团本、地下城、PvP、日常、社交与家园。七个方向只可单选，结果纯属恶搞。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
+            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 性格向 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题单选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
-                <div className="sin-progress"><span>罪证 {sinStep + 1} / {sessionSinQuestions.length}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
-                <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context}口供</p>
+                <div className="sin-progress"><span>罪证 {sessionSinQuestions[sinStep].slot} / {sessionSinQuestions.length} · {sessionSinQuestions[sinStep].group}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
+                <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context} · {sessionSinQuestions[sinStep].eyebrow}</p>
                 <h2>{sessionSinQuestions[sinStep].title}</h2><p>{sessionSinQuestions[sinStep].description}</p>
-                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option.scores)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
+                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
               </div>
             )}
             {sinStage === 'result' && (
               <div className="sin-result">
-                <p className="sin-mark">VII</p><p className="kicker">罪名成立 · 但不影响进组</p><h1>{sinResult.name}</h1><h2>{sinResult.alias}</h2><p className="sin-verdict">{sinResult.verdict}</p><blockquote>“{sinResult.confession}”</blockquote>
-                <div className="sin-specs"><span>恶搞推荐专精</span>{sinResult.specs.map((label, index) => { const spec = findSpecByLabel(label); return <div key={label}><b>0{index + 1}</b>{spec ? <ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={40} /> : <span />}<strong>{label}</strong></div> })}</div>
-                <p className="sin-disclaimer">这份结果不使用正式评分、不代表职业强度，也不会污染你的主测试答案。</p>
+                <p className="sin-mark">VII</p><p className="kicker">罪名成立 · 但不影响进组</p><h1>{sinLeaders.map((profile) => profile.name).join(' × ')}</h1><h2>{sinLeaders.map((profile) => `${profile.alias} ${profile.share}%`).join(' · ')}</h2>
+                {sinLeaders.length > 1 && <p className="sin-tie">{sinLeaders.length === 2 ? '两' : '三'}宗罪并列第一，推荐已同时考虑。</p>}
+                {sinLeaders.map((profile) => <div className="sin-reading" key={profile.key}>{sinLeaders.length > 1 && <b>{profile.name}</b>}<p className="sin-verdict">{profile.verdict}</p><p className="sin-playstyle">{profile.playstyle}</p></div>)}
+                <blockquote>“{sinLeaders.map((profile) => profile.confession).join(' ')}”</blockquote>
+                <div className="sin-bars" aria-label="七宗罪占比">{sinRanking.map((profile) => <div className={sinLeaders.some((leader) => leader.key === profile.key) ? 'lead' : ''} key={profile.key}><span>{profile.name}</span><i><em style={{ width:`${profile.share}%` }} /></i><b>{profile.share}%</b></div>)}</div>
+                <section className="sin-picks">
+                  <h3>按你的罪性推荐的专精 · 10 个</h3>
+                  <div className="sin-spec-grid">{sinSpecResults.map((spec, index) => <button type="button" className="sin-spec" onClick={() => setSelected(spec)} key={spec.id}><b>{String(index + 1).padStart(2, '0')}</b><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={40} /><span><small>{spec.className}</small><strong>{spec.specName}</strong></span><em>{spec.match}%</em></button>)}</div>
+                </section>
+                <section className="sin-picks">
+                  <h3>按你的罪性推荐的职业 · 5 个</h3>
+                  <div className="sin-class-grid">{sinClassResults.map((item, index) => <div className="sin-class" key={item.name}><b>{String(index + 1).padStart(2, '0')}</b><ClassIcon className={item.name} color={item.color} size={44} /><span><strong>{item.name}</strong><small>优先体验：{item.recommendedSpecs.join(' / ')}</small></span><em>{item.match}%</em></div>)}</div>
+                </section>
+                <p className="sin-disclaimer">罪名是性格画像，不代表职业强度；推荐与正式测试使用同一套专精评分，但两边答案互不影响。</p>
                 <div className="result-actions"><button className="sin-button" type="button" onClick={beginSin}>重新认罪</button><button className="text-button" type="button" onClick={begin}>回归正经测试</button></div>
               </div>
             )}
