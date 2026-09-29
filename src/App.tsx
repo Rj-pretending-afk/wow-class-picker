@@ -6,10 +6,10 @@ import { RadarChart } from './components/RadarChart'
 import { classProfileMap, classProfiles } from './data/classes'
 import { createQuestionSet, questions } from './data/questions'
 import { radarMetrics } from './data/radar'
-import { createSinQuestionSet, sinProfiles, sinQuestions } from './data/sins'
+import { createSinQuestionSet, sinPairTaglines, sinProfiles, sinQuestions } from './data/sins'
 import { specs } from './data/specs'
 import { getClassRadar, getIndifferenceSummary, getRangeLabel, getRoleLabel, getSpecRecommendations, rankClasses } from './engine/scoring'
-import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey, SinOption } from './types'
+import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
@@ -81,9 +81,12 @@ function App() {
   // 七宗罪：罪名分来自所选项的 scores；专精与职业推荐复用正式测试的评分引擎，数量与正式结果一致。
   const sinScores = useMemo(() => {
     const totals: Partial<Record<SinKey, number>> = {}
+    // 多选按点击顺序衰减（与正式测试相同的 62%），并归一化，保证每道题的罪名总分不因多选而放大。
     sessionSinQuestions.forEach((item) => {
-      const option = item.options.find((candidate) => candidate.id === sinAnswers[item.id]?.[0])
-      Object.entries(option?.scores ?? {}).forEach(([key, value]) => { totals[key as SinKey] = (totals[key as SinKey] ?? 0) + Number(value) })
+      const chosen = (sinAnswers[item.id] ?? []).map((id) => item.options.find((candidate) => candidate.id === id)).filter((option) => option && option.id !== 'any')
+      const weights = chosen.map((_, index) => Math.pow(.62, index))
+      const weightSum = weights.reduce((sum, weight) => sum + weight, 0)
+      chosen.forEach((option, index) => Object.entries(option?.scores ?? {}).forEach(([key, value]) => { totals[key as SinKey] = (totals[key as SinKey] ?? 0) + Number(value) * weights[index] / weightSum }))
     })
     return totals
   }, [sinAnswers, sessionSinQuestions])
@@ -96,6 +99,27 @@ function App() {
   // 并列第一时同时显示多个罪名；全部选“我无所谓”时归为懒惰。
   const sinLeaders = sinRanking[0].share ? sinRanking.filter((profile) => profile.share === sinRanking[0].share).slice(0, 3) : [sinRanking.find((profile) => profile.key === 'sloth') ?? sinRanking[0]]
   const sinSpecResults = useMemo(() => getSpecRecommendations(sinAnswers, sessionSinQuestions), [sinAnswers, sessionSinQuestions])
+  // 结果标语：同一份答案每次抽到同一句；另按双罪组合、纯度和首选专精追加判词。
+  const sinSeed = Object.entries(sinAnswers).flatMap(([id, picks]) => [id, ...picks]).join('|').split('').reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 100003, 7)
+  const sinTaglines = sinLeaders.map((profile, index) => profile.taglines[(sinSeed + index * 3) % profile.taglines.length])
+  const sinExtraLines = (() => {
+    const lines: string[] = []
+    const [first, second] = sinRanking
+    const order = sinProfiles.map((profile) => profile.key)
+    if (first.share && second.share && (sinLeaders.length > 1 || second.share >= first.share * .75)) {
+      const pair = [first.key, second.key].sort((a, b) => order.indexOf(a) - order.indexOf(b)).join('+')
+      if (sinPairTaglines[pair]) lines.push(`${first.name} × ${second.name}：${sinPairTaglines[pair]}`)
+    }
+    if (first.share >= 45) lines.push(`${first.name}纯度 ${first.share}%，几乎没有别的罪能插得进来。`)
+    else if (first.share && first.share <= 22) lines.push('七宗罪你样样都沾一点，是个均衡发展的罪人。')
+    const topSpec = sinSpecResults[0]
+    if (topSpec) {
+      const cell = `${topSpec.specName}${topSpec.className}`
+      const templates = [`为你量身定做的牢房：${cell}。`, `建议先去${cell}那里服刑。`, `判决：终身监禁于${cell}。`, `你的罪，${cell}最能承受。`]
+      lines.push(templates[sinSeed % templates.length])
+    }
+    return lines
+  })()
   const sinClassResults = useMemo(() => rankClasses(sinAnswers, sessionSinQuestions).slice(0, 5), [sinAnswers, sessionSinQuestions])
 
   const looksDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'looks').length
@@ -115,19 +139,24 @@ function App() {
     })
   }
   const nextQuestion = () => step === sessionQuestions.length - 1 ? setScreen('result') : setStep((current) => current + 1)
-  // 七宗罪回到上一题：答案按题目 id 保存，重新选择会直接覆盖，罪名分随之重算。
+  // 七宗罪回到上一题：答案按题目 id 保存，返回后可继续增减选择，罪名分随之重算。
   const goBackSin = () => sinStep === 0 ? setSinStage('intro') : setSinStep((current) => current - 1)
   const goBack = () => step === 0 ? setScreen('start') : setStep((current) => current - 1)
   const restart = () => { setSelected(null); setAnswers({}); setStep(0); setScreen('start') }
   const openAtlas = () => { setSelected(null); setScreen('atlas') }
   const openEaster = () => { setSinStage('intro'); setSinStep(0); setSinAnswers({}); setScreen('easter') }
   const beginSin = () => { setSessionSinQuestions(createSinQuestionSet()); setSinStage('quiz'); setSinStep(0); setSinAnswers({}) }
-  const answerSin = (option: SinOption) => {
+  // 七宗罪与正式测试一样可按顺序多选；“我无所谓”会清除其他选择。
+  const toggleSin = (optionId: string) => {
     const current = sessionSinQuestions[sinStep]
-    setSinAnswers((answered) => ({ ...answered, [current.id]: [option.id] }))
-    if (sinStep === sessionSinQuestions.length - 1) setSinStage('result')
-    else setSinStep((current) => current + 1)
+    setSinAnswers((answered) => {
+      const chosen = answered[current.id] ?? []
+      if (optionId === 'any') return { ...answered, [current.id]: chosen.includes('any') ? [] : ['any'] }
+      const withoutNeutral = chosen.filter((id) => id !== 'any')
+      return { ...answered, [current.id]: withoutNeutral.includes(optionId) ? withoutNeutral.filter((id) => id !== optionId) : [...withoutNeutral, optionId] }
+    })
   }
+  const nextSin = () => sinStep === sessionSinQuestions.length - 1 ? setSinStage('result') : setSinStep((current) => current + 1)
 
   const classRecommendations = (
     <section className={`class-recommendations ${indifference.isHigh ? 'class-first' : ''}`}>
@@ -338,15 +367,19 @@ function App() {
 
         {screen === 'easter' && (
           <section className="sin-screen">
-            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题单选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
+            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题可按顺序多选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
                 <div className="sin-meta"><button className="text-button" type="button" onClick={goBackSin}>‹ 上一题</button></div>
                 <div className="sin-progress"><span>罪证 {sessionSinQuestions[sinStep].slot} / {sessionSinQuestions.length} · {sessionSinQuestions[sinStep].group}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
                 <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context} · {sessionSinQuestions[sinStep].eyebrow}</p>
                 <h2>{sessionSinQuestions[sinStep].title}</h2><p>{sessionSinQuestions[sinStep].description}</p>
-                <p className="sin-single"><b>单选</b>只能选一个答案，点击后直接进入下一题</p>
-                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className={sinAnswers[sessionSinQuestions[sinStep].id]?.[0] === option.id ? 'option-card sin-option selected' : 'option-card sin-option'} type="button" aria-pressed={sinAnswers[sessionSinQuestions[sinStep].id]?.[0] === option.id} onClick={() => answerSin(option)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
+                <div className="option-list" role="group" aria-label={sessionSinQuestions[sinStep].title}>{sessionSinQuestions[sinStep].options.map((option, index) => {
+                  const picks = sinAnswers[sessionSinQuestions[sinStep].id] ?? []
+                  const order = picks.indexOf(option.id)
+                  return <button className={order >= 0 ? 'option-card sin-option selected' : 'option-card sin-option'} type="button" aria-pressed={order >= 0} onClick={() => toggleSin(option.id)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className={order >= 0 ? 'option-check chosen' : 'option-check'} aria-label={order >= 0 ? `第 ${order + 1} 优先` : '未选择'}>{order >= 0 ? order + 1 : ''}</span></button>
+                })}</div>
+                <div className="quiz-next sin-next"><span>可多选 · 点击顺序就是罪证轻重 · “我无所谓”会清除其他选择</span><button className="sin-button" type="button" disabled={!sinAnswers[sessionSinQuestions[sinStep].id]?.length} onClick={nextSin}>{sinStep === sessionSinQuestions.length - 1 ? '宣判结果' : '下一题'} →</button></div>
               </div>
             )}
             {sinStage === 'result' && (
@@ -354,7 +387,8 @@ function App() {
                 <p className="sin-mark">VII</p><p className="kicker">罪名成立 · 但不影响进组</p><h1>{sinLeaders.map((profile) => profile.name).join(' × ')}</h1><h2>{sinLeaders.map((profile) => `${profile.alias} ${profile.share}%`).join(' · ')}</h2>
                 {sinLeaders.length > 1 && <p className="sin-tie">{sinLeaders.length === 2 ? '两' : '三'}宗罪并列第一，推荐已同时考虑。</p>}
                 {sinLeaders.map((profile) => <div className="sin-reading" key={profile.key}>{sinLeaders.length > 1 && <b>{profile.name}</b>}<p className="sin-verdict">{profile.verdict}</p><p className="sin-playstyle">{profile.playstyle}</p></div>)}
-                <blockquote>“{sinLeaders.map((profile) => profile.confession).join(' ')}”</blockquote>
+                <blockquote>“{sinTaglines.join(' ')}”</blockquote>
+                {sinExtraLines.length > 0 && <ul className="sin-lines">{sinExtraLines.map((line) => <li key={line}>{line}</li>)}</ul>}
                 <div className="sin-bars" aria-label="七宗罪占比">{sinRanking.map((profile) => <div className={sinLeaders.some((leader) => leader.key === profile.key) ? 'lead' : ''} key={profile.key}><span>{profile.name}</span><i><em style={{ width:`${profile.share}%` }} /></i><b>{profile.share}%</b></div>)}</div>
                 <section className="sin-picks">
                   <h3>按你的罪性推荐的专精 · 10 个</h3>

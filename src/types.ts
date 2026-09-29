@@ -100,5 +100,5 @@ export interface SinProfile {
   alias: string
   verdict: string
   playstyle: string
-  confession: string
+  taglines: string[]
 }
