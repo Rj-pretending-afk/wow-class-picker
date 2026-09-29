@@ -15,6 +15,15 @@ type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
 const formatMetric = (value: number) => value.toFixed(1)
 const findSpecByLabel = (label: string) => specs.find((spec) => spec.specName + spec.className === label)
+const getSpecIntro = (spec: (typeof specs)[number]) => `${spec.specName}是${getRoleLabel(spec.role)}专精，主要在${getRangeLabel(spec.range)}作战。${spec.fantasy}`
+const getClassIntro = (className: string) => {
+  const profile = classProfileMap.get(className)
+  return profile ? `${profile.name}使用${profile.armor}装备。${profile.intro} ${profile.identity}` : ''
+}
+
+function ProsCons({ strengths, weaknesses, scope }: { strengths: string; weaknesses: string; scope?: string }) {
+  return <div className="pros-cons"><p><span>{scope}优点</span>{strengths}</p><p><span>{scope}缺点</span>{weaknesses}</p></div>
+}
 
 function App() {
   const [screen, setScreen] = useState<Screen>('start')
@@ -101,8 +110,8 @@ function App() {
               <strong>{item.match}<small>%</small></strong>
             </div>
             <RadarChart values={getClassRadar(item.name)} color={item.color} label={`${item.name}职业`} compact />
-            <div className="intro-block"><span>职业介绍</span><p>{item.intro}</p></div>
-            <p className="class-identity">{item.identity}</p>
+            <div className="intro-block"><span>职业介绍</span><p>{getClassIntro(item.name)}</p></div>
+            <ProsCons strengths={item.strengths} weaknesses={item.weaknesses} />
             <div className="spec-chips">{specs.filter((spec) => spec.className === item.name).map((spec) => <span key={spec.id}><ClassIcon className={spec.className} specId={spec.id} color={item.color} size={22} round />{spec.specName} · {getRoleLabel(spec.role)}</span>)}</div>
             <div className="class-meta"><span>{item.roles.join(' · ')}</span><span>优先体验：{item.recommendedSpecs.join(' / ')}</span></div>
             <p className="class-reason">{item.reason}</p>
@@ -198,8 +207,10 @@ function App() {
               <div className="winner-copy">
                 <span className="class-name">首选 · {results[0].className}</span>
                 <h3>{results[0].specName}</h3>
-                <div className="intro-block"><span>专精介绍</span><p>{results[0].fantasy} {results[0].summary}</p></div>
-                <div className="intro-block class-intro"><span>职业介绍</span><p>{classProfileMap.get(results[0].className)?.intro}</p></div>
+                <div className="intro-block"><span>专精介绍</span><p>{getSpecIntro(results[0])}</p></div>
+                <ProsCons scope="专精" strengths={results[0].strengths} weaknesses={results[0].weaknesses} />
+                <div className="intro-block class-intro"><span>职业介绍</span><p>{getClassIntro(results[0].className)}</p></div>
+                <ProsCons scope="职业" strengths={classProfileMap.get(results[0].className)?.strengths ?? ''} weaknesses={classProfileMap.get(results[0].className)?.weaknesses ?? ''} />
                 <div className="split-score"><span>颜值 {results[0].looksMatch}%</span><span>手感 {results[0].feelMatch}%</span></div>
                 <ul>{results[0].reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                 <button className="detail-button" type="button" onClick={() => setSelected(results[0])}>查看完整玩法档案</button>
@@ -213,7 +224,7 @@ function App() {
                 <button className="alternative-card" type="button" onClick={() => setSelected(spec)} key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
                   <span className="alt-rank">0{index + 2}</span>
                   <ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={48} />
-                  <span className="alt-name"><small>{spec.className}</small><strong>{spec.specName}</strong><span><b>专精介绍</b>{spec.summary}</span><span><b>职业介绍</b>{classProfileMap.get(spec.className)?.intro}</span></span>
+                  <span className="alt-name"><small>{spec.className}</small><strong>{spec.specName}</strong><span><b>专精介绍</b>{getSpecIntro(spec)}</span><span><b>专精优点</b>{spec.strengths}</span><span><b>专精缺点</b>{spec.weaknesses}</span><span><b>职业介绍</b>{getClassIntro(spec.className)}</span><span><b>职业优点</b>{classProfileMap.get(spec.className)?.strengths}</span><span><b>职业缺点</b>{classProfileMap.get(spec.className)?.weaknesses}</span></span>
                   <span className="alt-bars"><i style={{ width: `${spec.looksMatch}%` }} /><i style={{ width: `${spec.feelMatch}%` }} /></span>
                   <span className="alt-score"><strong>{spec.match}</strong>%</span>
                 </button>
@@ -254,7 +265,8 @@ function App() {
                 {filteredSpecs.map((spec) => (
                   <article className="atlas-card" key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
                     <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}<b className="sort-score">排序分 {formatMetric(atlasScore(spec))}</b></small></div>
-                    <p>{spec.summary}</p>
+                    <p>{getSpecIntro(spec)}</p>
+                    <ProsCons strengths={spec.strengths} weaknesses={spec.weaknesses} />
                     <RadarChart values={spec.metrics} color={spec.color} label={`${spec.className}${spec.specName}`} />
                     <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(spec.metrics[key])}</b></span>)}</div>
                   </article>
@@ -274,14 +286,15 @@ function App() {
                 </div>
                 <article className="atlas-card class-detail" style={{ '--class-color': pickedProfile.color } as React.CSSProperties}>
                   <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={pickedProfile.name} color={pickedProfile.color} size={72} /><div><span>{pickedProfile.armor}职业 · 玩法跨度 {pickedProfile.versatility} / 5</span><h2>{pickedProfile.name}</h2></div></div><small>{pickedProfile.color.toUpperCase()}</small></div>
-                  <p>{pickedProfile.intro} {pickedProfile.identity}</p>
+                  <p>{getClassIntro(pickedProfile.name)}</p>
+                  <ProsCons strengths={pickedProfile.strengths} weaknesses={pickedProfile.weaknesses} />
                   <div className="spec-chips">{specs.filter((spec) => spec.className === pickedProfile.name).map((spec) => <span key={spec.id}><ClassIcon className={spec.className} specId={spec.id} color={pickedProfile.color} size={28} round />{spec.specName} · {getRoleLabel(spec.role)}</span>)}</div>
                   <RadarChart values={getClassRadar(pickedProfile.name)} color={pickedProfile.color} label={`${pickedProfile.name}职业`} />
                   <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(getClassRadar(pickedProfile.name)[key])}</b></span>)}</div>
                 </article>
               </div>
             )}
-            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.1。六维分数与手感标签综合官方改动、当前专精指南和玩家实战讨论逐项校准；只记录玩法体验，不追随短期数值强弱。背景考据只影响颜值题，发生冲突时以当前游戏体验为准。本页不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24293281/curse-of-ulatek-content-update-notes" target="_blank" rel="noreferrer">暴雪：12.1 更新说明</a><a href="https://www.wowhead.com/news/patch-12-1-guide-compendium-every-guide-you-ll-need-for-season-2-382408" target="_blank" rel="noreferrer">Wowhead：12.1 指南汇总</a><a href="https://www.icy-veins.com/wow/choose-your-main-guide" target="_blank" rel="noreferrer">Icy Veins：12.1 主职业指南</a><a href="https://www.reddit.com/r/wow/comments/1ua1oq4/opinions_of_the_class_changes_in_121/" target="_blank" rel="noreferrer">社区：12.1 职业改动体验</a></div></aside>
+            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.1。六维分数与手感标签综合官方资料、当前专精指南和玩家实战讨论逐项校准；只记录玩法体验，不追随短期数值强弱。背景考据只影响颜值题，发生冲突时以当前游戏体验为准。本页不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24293281/curse-of-ulatek-content-update-notes" target="_blank" rel="noreferrer">暴雪：12.1 正式服资料</a><a href="https://www.wowhead.com/news/patch-12-1-guide-compendium-every-guide-you-ll-need-for-season-2-382408" target="_blank" rel="noreferrer">Wowhead：12.1 指南汇总</a><a href="https://www.icy-veins.com/wow/choose-your-main-guide" target="_blank" rel="noreferrer">Icy Veins：12.1 主职业指南</a><a href="https://www.reddit.com/r/wow/comments/1ua1oq4/opinions_of_the_class_changes_in_121/" target="_blank" rel="noreferrer">社区：12.1 职业体验</a></div></aside>
           </section>
         )}
 
@@ -318,10 +331,11 @@ function App() {
             <span className="modal-class" style={{ color:selected.color }}>{selected.className} · {getRoleLabel(selected.role)} · {getRangeLabel(selected.range)}</span>
             <h2 id="detail-title">{selected.match}% · {selected.specName}</h2>
             <RadarChart values={selected.metrics} color={selected.color} label={`${selected.className}${selected.specName}`} />
-            <div className="modal-copy-block"><span>专精介绍</span><p>{selected.fantasy} {selected.summary}</p></div>
-            <div className="modal-copy-block class-copy"><span>职业介绍</span><p>{classProfileMap.get(selected.className)?.intro} {classProfileMap.get(selected.className)?.identity}</p></div>
+            <div className="modal-copy-block"><span>专精介绍</span><p>{getSpecIntro(selected)}</p></div>
+            <ProsCons scope="专精" strengths={selected.strengths} weaknesses={selected.weaknesses} />
+            <div className="modal-copy-block class-copy"><span>职业介绍</span><p>{getClassIntro(selected.className)}</p></div>
+            <ProsCons scope="职业" strengths={classProfileMap.get(selected.className)?.strengths ?? ''} weaknesses={classProfileMap.get(selected.className)?.weaknesses ?? ''} />
             <div className="modal-axis"><div><span>颜值契合</span><b>{selected.looksMatch}%</b></div><div><span>手感契合</span><b>{selected.feelMatch}%</b></div></div>
-            <div className="caution-box"><span>选择前留意</span><p>{selected.caution}</p></div>
             <div className="metric-grid">{radarMetrics.map(({ key, label }) => <div key={key}><span className="metric-value"><span>{label}</span><b>{formatMetric(selected.metrics[key])} / 9</b></span><div className="metric-track" role="meter" aria-label={`${label} ${formatMetric(selected.metrics[key])}/9`} aria-valuenow={selected.metrics[key]} aria-valuemin={0} aria-valuemax={9}><i style={{ width:`${selected.metrics[key] / 9 * 100}%` }} /></div></div>)}</div>
             <button className="primary-button full" type="button" onClick={() => setSelected(null)}>了解了</button>
           </section>

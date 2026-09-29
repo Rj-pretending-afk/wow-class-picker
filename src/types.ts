@@ -15,7 +15,8 @@ export interface SpecProfile {
   tags: string[]
   fantasy: string
   summary: string
-  caution: string
+  strengths: string
+  weaknesses: string
 }
 
 export interface AnswerEffect {
@@ -40,6 +41,8 @@ export interface ClassProfile {
   armor: SpecProfile['armor']
   intro: string
   identity: string
+  strengths: string
+  weaknesses: string
   versatility: number
 }
 
