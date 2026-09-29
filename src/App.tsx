@@ -336,7 +336,7 @@ function App() {
 
         {screen === 'easter' && (
           <section className="sin-screen">
-            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 性格向 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题单选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
+            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题单选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
                 <div className="sin-progress"><span>罪证 {sessionSinQuestions[sinStep].slot} / {sessionSinQuestions.length} · {sessionSinQuestions[sinStep].group}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
