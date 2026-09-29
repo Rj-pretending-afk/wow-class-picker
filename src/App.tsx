@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { ClassIcon } from './components/ClassIcon'
+import { Compass } from './components/Compass'
 import { RadarChart } from './components/RadarChart'
 import { classProfileMap, classProfiles } from './data/classes'
 import { questions } from './data/questions'
@@ -12,6 +14,7 @@ import type { Answers, RankedSpec, SinKey } from './types'
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
 const formatMetric = (value: number) => value.toFixed(1)
+const findSpecByLabel = (label: string) => specs.find((spec) => spec.specName + spec.className === label)
 
 function App() {
   const [screen, setScreen] = useState<Screen>('start')
@@ -20,6 +23,7 @@ function App() {
   const [selected, setSelected] = useState<RankedSpec | null>(null)
   const [atlasTab, setAtlasTab] = useState<'specs' | 'classes'>('specs')
   const [atlasClass, setAtlasClass] = useState('全部')
+  const [atlasPick, setAtlasPick] = useState(classProfiles[1].name)
   const [sinStage, setSinStage] = useState<SinStage>('intro')
   const [sinStep, setSinStep] = useState(0)
   const [sinScores, setSinScores] = useState<Partial<Record<SinKey, number>>>({})
@@ -28,6 +32,7 @@ function App() {
   const classResults = useMemo(() => rankClasses(answers).slice(0, 3), [answers])
   const indifference = useMemo(() => getIndifferenceSummary(answers), [answers])
   const filteredSpecs = atlasClass === '全部' ? specs : specs.filter((spec) => spec.className === atlasClass)
+  const pickedProfile = classProfileMap.get(atlasPick) ?? classProfiles[0]
   const sinResult = useMemo(() => [...sinProfiles].sort((a, b) => (sinScores[b.key] ?? 0) - (sinScores[a.key] ?? 0))[0], [sinScores])
 
   const looksDone = questions.slice(0, step).filter((item) => item.category === 'looks').length
@@ -67,12 +72,14 @@ function App() {
       <div className="class-grid">
         {classResults.map((item, index) => (
           <article className="class-card" key={item.name} style={{ '--class-color': item.color } as React.CSSProperties}>
-            <div className="class-card-top"><span>0{index + 1}</span><strong>{item.match}%</strong></div>
-            <span className="content-label">职业推荐</span>
-            <h3>{item.name}</h3>
+            <div className="class-card-top">
+              <div className="class-card-title"><ClassIcon className={item.name} color={item.color} size={48} /><div><span>0{index + 1}</span><h3>{item.name}</h3></div></div>
+              <strong>{item.match}<small>%</small></strong>
+            </div>
             <RadarChart values={getClassRadar(item.name)} color={item.color} label={`${item.name}职业`} compact />
             <div className="intro-block"><span>职业介绍</span><p>{item.intro}</p></div>
             <p className="class-identity">{item.identity}</p>
+            <div className="spec-chips">{specs.filter((spec) => spec.className === item.name).map((spec) => <span key={spec.id}><ClassIcon className={spec.className} specId={spec.id} color={item.color} size={22} round />{spec.specName} · {getRoleLabel(spec.role)}</span>)}</div>
             <div className="class-meta"><span>{item.roles.join(' · ')}</span><span>优先体验：{item.recommendedSpecs.join(' / ')}</span></div>
             <p className="class-reason">{item.reason}</p>
           </article>
@@ -85,7 +92,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <button className="brand" type="button" onClick={restart} aria-label="返回首页">
-          <span className="brand-mark"><i>A</i></span>
+          <svg className="brand-mark" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="20" r="18" stroke="#e8b75c" strokeOpacity="0.5" /><path d="M20 4.5l4 15.5h-8Z" fill="#e8b75c" /><path d="M16 20h8l-4 15.5Z" fill="#9b7cf2" /><path d="M3 20h5 M32 20h5" stroke="#e8b75c" strokeOpacity="0.6" /></svg>
           <span><strong>职业罗盘</strong><small>艾泽拉斯角色选择器</small></span>
         </button>
         <nav className="top-actions" aria-label="站点导航">
@@ -99,19 +106,15 @@ function App() {
         {screen === 'start' && (
           <section className="start-screen">
             <div className="intro-copy">
-              <p className="kicker">颜值 × 手感 · 双轴匹配</p>
-              <h1>你喜欢的样子，<br /><em>也应该玩得顺手。</em></h1>
-              <p className="lede">回答 {questions.length} 道简单问题，并行计算颜值与手感。上手难度和操作上限按 12.x 重做后的资料独立评分，最后给出 6 个专精与 3 个职业方向。</p>
-              <button className="hero-button" type="button" onClick={begin}>开始测试 <span>约 2 分钟</span></button>
+              <p className="axis-kicker"><span className="looks">颜值</span><i /><b>×</b><i /><span className="feel">手感</span><em>双轴匹配</em></p>
+              <h1>坐牢，<br /><em>坐最爱的牢。</em></h1>
+              <p className="lede">{questions.length} 道问题选择你最爱的牢房(天赋)，并行计算颜值与手感评分，最后给出 6 个专精与 3 个职业方向。</p>
+              <div className="hero-actions">
+                <button className="hero-button" type="button" onClick={begin}>开始测试 <span>约 2 分钟</span></button>
+                <button className="text-button" type="button" onClick={openAtlas}>先看职业图鉴</button>
+              </div>
             </div>
-
-            <div className="axis-preview" aria-label="两条评分轴">
-              <div className="axis-card looks-axis"><span>01</span><strong>颜值偏好</strong><p>幻想、轮廓、武器、特效与角色呈现</p><i /></div>
-              <div className="axis-link"><span>并行</span><b>×</b><span>计分</span></div>
-              <div className="axis-card feel-axis"><span>02</span><strong>手感偏好</strong><p>职责、距离、节奏、上手难度、操作上限与反馈</p><i /></div>
-            </div>
-
-            <div className="start-note"><span>13 个职业</span><span>40 个专精</span><span>全职业六维图</span><span>无需登录</span></div>
+            <Compass />
           </section>
         )}
 
@@ -129,9 +132,11 @@ function App() {
             </div>
 
             <div className="question-block">
-              <p className={`kicker ${question.category}`}>{question.eyebrow}</p>
-              <h2>{question.title}</h2>
-              <p className="question-description">{question.description}</p>
+              <div className="question-copy">
+                <p className={`kicker ${question.category}`}>{question.eyebrow}</p>
+                <h2>{question.title}</h2>
+                <p className="question-description">{question.description}</p>
+              </div>
               <div className="option-list" role="group" aria-label={question.title}>
                 {question.options.map((option, index) => (
                   <button type="button" className={answers[question.id] === option.id ? 'option-card selected' : 'option-card'} onClick={() => answerQuestion(option.id)} key={option.id}>
@@ -161,7 +166,10 @@ function App() {
             </div>
 
             <article className="winner" style={{ '--class-color': results[0].color } as React.CSSProperties}>
-              <div className="winner-score"><strong>{results[0].match}</strong><span>%</span><small>综合倾向</small></div>
+              <div className="winner-score">
+                <span className="winner-icon"><ClassIcon className={results[0].className} specId={results[0].id} color={results[0].color} size={104} label={`${results[0].className}${results[0].specName}`} /><ClassIcon className={results[0].className} color={results[0].color} size={38} round /></span>
+                <div><strong>{results[0].match}</strong><span>%</span></div><small>综合倾向</small>
+              </div>
               <div className="winner-copy">
                 <span className="class-name">首选 · {results[0].className}</span>
                 <h3>{results[0].specName}</h3>
@@ -179,6 +187,7 @@ function App() {
               {results.slice(1).map((spec, index) => (
                 <button className="alternative-card" type="button" onClick={() => setSelected(spec)} key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
                   <span className="alt-rank">0{index + 2}</span>
+                  <ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={48} />
                   <span className="alt-name"><small>{spec.className}</small><strong>{spec.specName}</strong><span><b>专精介绍</b>{spec.summary}</span><span><b>职业介绍</b>{classProfileMap.get(spec.className)?.intro}</span></span>
                   <span className="alt-bars"><i style={{ width: `${spec.looksMatch}%` }} /><i style={{ width: `${spec.feelMatch}%` }} /></span>
                   <span className="alt-score"><strong>{spec.match}</strong>%</span>
@@ -208,7 +217,7 @@ function App() {
               <div className="atlas-grid">
                 {filteredSpecs.map((spec) => (
                   <article className="atlas-card" key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
-                    <div className="atlas-card-heading"><div><span>{spec.className}</span><h2>{spec.specName}</h2></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}</small></div>
+                    <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}</small></div>
                     <p>{spec.summary}</p>
                     <RadarChart values={spec.metrics} color={spec.color} label={`${spec.className}${spec.specName}`} />
                     <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(spec.metrics[key])}</b></span>)}</div>
@@ -216,15 +225,22 @@ function App() {
                 ))}
               </div>
             ) : (
-              <div className="atlas-grid class-atlas-grid">
-                {classProfiles.map((profile) => (
-                  <article className="atlas-card" key={profile.name} style={{ '--class-color': profile.color } as React.CSSProperties}>
-                    <div className="atlas-card-heading"><div><span>{profile.armor}职业</span><h2>{profile.name}</h2></div><small>{specs.filter((spec) => spec.className === profile.name).length} 个专精</small></div>
-                    <p>{profile.intro} {profile.identity}</p>
-                    <RadarChart values={getClassRadar(profile.name)} color={profile.color} label={`${profile.name}职业`} />
-                    <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(getClassRadar(profile.name)[key])}</b></span>)}</div>
-                  </article>
-                ))}
+              <div className="class-atlas">
+                <div className="class-tiles">
+                  {classProfiles.map((profile) => (
+                    <button type="button" className={profile.name === atlasPick ? 'class-tile active' : 'class-tile'} aria-pressed={profile.name === atlasPick} onClick={() => setAtlasPick(profile.name)} key={profile.name} style={{ '--class-color': profile.color } as React.CSSProperties}>
+                      <ClassIcon className={profile.name} color={profile.color} size={48} />
+                      <span><strong>{profile.name}</strong><small>{profile.armor} · {specs.filter((spec) => spec.className === profile.name).length} 专精</small></span>
+                    </button>
+                  ))}
+                </div>
+                <article className="atlas-card class-detail" style={{ '--class-color': pickedProfile.color } as React.CSSProperties}>
+                  <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={pickedProfile.name} color={pickedProfile.color} size={72} /><div><span>{pickedProfile.armor}职业 · 玩法跨度 {pickedProfile.versatility} / 5</span><h2>{pickedProfile.name}</h2></div></div><small>{pickedProfile.color.toUpperCase()}</small></div>
+                  <p>{pickedProfile.intro} {pickedProfile.identity}</p>
+                  <div className="spec-chips">{specs.filter((spec) => spec.className === pickedProfile.name).map((spec) => <span key={spec.id}><ClassIcon className={spec.className} specId={spec.id} color={pickedProfile.color} size={28} round />{spec.specName} · {getRoleLabel(spec.role)}</span>)}</div>
+                  <RadarChart values={getClassRadar(pickedProfile.name)} color={pickedProfile.color} label={`${pickedProfile.name}职业`} />
+                  <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(getClassRadar(pickedProfile.name)[key])}</b></span>)}</div>
+                </article>
               </div>
             )}
             <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.x。上手难度与操作上限参考暴雪的 Midnight 重做目标、12.x 更新说明，以及 Wowhead / Icy Veins 当前专精指南后统一校准；属于面向选角的相对评分。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 战斗与天赋更新</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：Midnight 职业指南</a><a href="https://www.wowhead.com/guides/classes" target="_blank" rel="noreferrer">Wowhead：Midnight 职业指南</a></div></aside>
@@ -245,7 +261,7 @@ function App() {
             {sinStage === 'result' && (
               <div className="sin-result">
                 <p className="sin-mark">VII</p><p className="kicker">罪名成立 · 但不影响进组</p><h1>{sinResult.name}</h1><h2>{sinResult.alias}</h2><p className="sin-verdict">{sinResult.verdict}</p><blockquote>“{sinResult.confession}”</blockquote>
-                <div className="sin-specs"><span>恶搞推荐专精</span>{sinResult.specs.map((spec, index) => <div key={spec}><b>0{index + 1}</b><strong>{spec}</strong></div>)}</div>
+                <div className="sin-specs"><span>恶搞推荐专精</span>{sinResult.specs.map((label, index) => { const spec = findSpecByLabel(label); return <div key={label}><b>0{index + 1}</b>{spec ? <ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={40} /> : <span />}<strong>{label}</strong></div> })}</div>
                 <p className="sin-disclaimer">这份结果不使用正式评分、不代表职业强度，也不会污染你的主测试答案。</p>
                 <div className="result-actions"><button className="sin-button" type="button" onClick={beginSin}>重新认罪</button><button className="text-button" type="button" onClick={begin}>回归正经测试</button></div>
               </div>
@@ -260,6 +276,7 @@ function App() {
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
           <section className="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" onClick={() => setSelected(null)} aria-label="关闭">×</button>
+            <ClassIcon className={selected.className} specId={selected.id} color={selected.color} size={64} />
             <span className="modal-class" style={{ color:selected.color }}>{selected.className} · {getRoleLabel(selected.role)} · {getRangeLabel(selected.range)}</span>
             <h2 id="detail-title">{selected.match}% · {selected.specName}</h2>
             <RadarChart values={selected.metrics} color={selected.color} label={`${selected.className}${selected.specName}`} />
