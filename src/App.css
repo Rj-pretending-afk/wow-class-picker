@@ -294,6 +294,8 @@ footer { border-top:1px solid #221d33; min-height:64px; display:flex; align-item
 .sin-option.selected .option-check { color:#fff5f3; border-color:var(--crimson); background:var(--crimson); }
 .sin-next .sin-button { margin:0; min-height:50px; flex-shrink:0; }
 .sin-next .sin-button:disabled { opacity:.4; cursor:not-allowed; }
+.sin-quote p { margin:0; }
+.sin-quote p + p { margin-top:10px; color:#d9cdd0; font-size:17px; }
 .sin-lines { list-style:none; width:min(620px,100%); margin:-14px auto 34px; padding:0; display:grid; gap:8px; }
 .sin-lines li { color:#d9cdd0; font-size:15px; line-height:1.7; }
 .sin-lines li::before { content:"◆"; color:var(--crimson); font-size:10px; margin-right:10px; vertical-align:2px; }

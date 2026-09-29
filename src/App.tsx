@@ -9,11 +9,41 @@ import { radarMetrics } from './data/radar'
 import { createSinQuestionSet, sinPairTaglines, sinProfiles, sinQuestions } from './data/sins'
 import { specs } from './data/specs'
 import { getClassRadar, getIndifferenceSummary, getRangeLabel, getRoleLabel, getSpecRecommendations, rankClasses } from './engine/scoring'
-import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey } from './types'
+import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey, SinProfile } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
 type SortDirection = 'desc' | 'asc'
+type RankedSin = SinProfile & { share: number }
+
+// 自白按罪名占比加权抽取：第一句出自主罪（并列时每个主罪各一句）；其余从所有上榜罪名中按占比随机抽，
+// 占比越高越容易出现，次要罪名偶尔也会冒出来。以答案为种子的伪随机，同一份答案每次结果相同。
+function pickSinTaglines(seed: number, leaders: RankedSin[], ranking: RankedSin[]) {
+  let state = seed || 1
+  const random = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648 }
+  const used = new Set<string>()
+  const pickFrom = (profile: RankedSin) => {
+    const pool = profile.taglines.filter((line) => !used.has(line))
+    const line = pool[Math.floor(random() * pool.length)]
+    used.add(line)
+    return line
+  }
+  const lines = leaders.map(pickFrom)
+  const candidates = ranking.filter((profile) => profile.share > 0)
+  const extraCount = candidates.filter((profile) => profile.share >= 15).length >= 3 ? 2 : 1
+  for (let index = 0; index < extraCount && candidates.length; index += 1) {
+    const total = candidates.reduce((sum, profile) => sum + Math.pow(profile.share, 1.3), 0)
+    const roll = random() * total
+    let cumulative = 0
+    let chosen = candidates[0]
+    for (const profile of candidates) {
+      cumulative += Math.pow(profile.share, 1.3)
+      if (roll <= cumulative) { chosen = profile; break }
+    }
+    lines.push(pickFrom(chosen))
+  }
+  return lines
+}
 const formatMetric = (value: number) => value.toFixed(1)
 const getSpecIntro = (spec: (typeof specs)[number]) => `${spec.specName}是${getRoleLabel(spec.role)}专精，主要在${getRangeLabel(spec.range)}作战。${spec.fantasy}`
 const getClassIntro = (className: string) => {
@@ -101,7 +131,7 @@ function App() {
   const sinSpecResults = useMemo(() => getSpecRecommendations(sinAnswers, sessionSinQuestions), [sinAnswers, sessionSinQuestions])
   // 结果标语：同一份答案每次抽到同一句；另按双罪组合、纯度和首选专精追加判词。
   const sinSeed = Object.entries(sinAnswers).flatMap(([id, picks]) => [id, ...picks]).join('|').split('').reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 100003, 7)
-  const sinTaglines = sinLeaders.map((profile, index) => profile.taglines[(sinSeed + index * 3) % profile.taglines.length])
+  const sinTaglines = pickSinTaglines(sinSeed, sinLeaders, sinRanking)
   const sinExtraLines = (() => {
     const lines: string[] = []
     const [first, second] = sinRanking
@@ -387,7 +417,7 @@ function App() {
                 <p className="sin-mark">VII</p><p className="kicker">罪名成立 · 但不影响进组</p><h1>{sinLeaders.map((profile) => profile.name).join(' × ')}</h1><h2>{sinLeaders.map((profile) => `${profile.alias} ${profile.share}%`).join(' · ')}</h2>
                 {sinLeaders.length > 1 && <p className="sin-tie">{sinLeaders.length === 2 ? '两' : '三'}宗罪并列第一，推荐已同时考虑。</p>}
                 {sinLeaders.map((profile) => <div className="sin-reading" key={profile.key}>{sinLeaders.length > 1 && <b>{profile.name}</b>}<p className="sin-verdict">{profile.verdict}</p><p className="sin-playstyle">{profile.playstyle}</p></div>)}
-                <blockquote>“{sinTaglines.join(' ')}”</blockquote>
+                <blockquote className="sin-quote">{sinTaglines.map((line) => <p key={line}>“{line.replace(/“/g, '「').replace(/”/g, '」')}”</p>)}</blockquote>
                 {sinExtraLines.length > 0 && <ul className="sin-lines">{sinExtraLines.map((line) => <li key={line}>{line}</li>)}</ul>}
                 <div className="sin-bars" aria-label="七宗罪占比">{sinRanking.map((profile) => <div className={sinLeaders.some((leader) => leader.key === profile.key) ? 'lead' : ''} key={profile.key}><span>{profile.name}</span><i><em style={{ width:`${profile.share}%` }} /></i><b>{profile.share}%</b></div>)}</div>
                 <section className="sin-picks">
