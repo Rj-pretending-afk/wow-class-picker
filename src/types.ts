@@ -31,6 +31,15 @@ export interface QuestionOption {
   effect: AnswerEffect
 }
 
+export interface ClassProfile {
+  name: string
+  color: string
+  armor: SpecProfile['armor']
+  intro: string
+  identity: string
+  versatility: number
+}
+
 export interface Question {
   id: string
   category: 'looks' | 'feel'
@@ -48,4 +57,18 @@ export interface RankedSpec extends SpecProfile {
   looksMatch: number
   feelMatch: number
   reasons: string[]
+}
+
+export interface RankedClass extends ClassProfile {
+  match: number
+  roles: string[]
+  recommendedSpecs: string[]
+  reason: string
+}
+
+export interface IndifferenceSummary {
+  count: number
+  total: number
+  ratio: number
+  isHigh: boolean
 }

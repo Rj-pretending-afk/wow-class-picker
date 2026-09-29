@@ -1,6 +1,6 @@
 import type { Question } from '../types'
 
-export const questions: Question[] = [
+const baseQuestions: Question[] = [
   { id:'power', category:'looks', eyebrow:'颜值 01 · 力量主题', title:'哪一种力量最能让你心动？', description:'先选角色幻想，不考虑版本强弱。', options:[
     { id:'light', label:'圣光与秩序', hint:'金色、守护、审判', effect:{ tags:['light','radiant'] } },
     { id:'nature', label:'自然与元素', hint:'星辰、风暴、野兽与生命', effect:{ tags:['nature','elemental'] } },
@@ -70,3 +70,15 @@ export const questions: Question[] = [
     { id:'support', label:'帮助全队变强', hint:'工具、增益与救场同样重要', effect:{ tags:['support'], roles:['support','healer','tank'] } },
   ]},
 ]
+
+const indifferentOption = {
+  id: 'any',
+  label: '我无所谓',
+  hint: '这一题不限制专精，并计入职业探索倾向',
+  effect: {},
+}
+
+export const questions: Question[] = baseQuestions.map((question) => ({
+  ...question,
+  options: [...question.options.filter((option) => option.id !== 'any'), indifferentOption],
+}))
