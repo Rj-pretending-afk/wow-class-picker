@@ -96,11 +96,5 @@ export function rankClasses(answers: Answers): RankedClass[] {
 }
 
 export function getSpecRecommendations(answers: Answers, limit = 6): RankedSpec[] {
-  const rankedSpecs = rankSpecs(answers)
-  if (!getIndifferenceSummary(answers).isHigh) return rankedSpecs.slice(0, limit)
-
-  const versatileClasses = rankClasses(answers).slice(0, 3)
-  return versatileClasses
-    .flatMap((profile) => rankedSpecs.filter((spec) => spec.className === profile.name).slice(0, 2))
-    .slice(0, limit)
+  return rankSpecs(answers).slice(0, limit)
 }
