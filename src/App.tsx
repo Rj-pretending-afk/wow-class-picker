@@ -132,7 +132,7 @@ function App() {
             <div className="intro-copy">
               <p className="axis-kicker"><span className="looks">颜值</span><i /><b>×</b><i /><span className="feel">手感</span><em>双轴匹配</em></p>
               <h1>坐牢，<br /><em>坐最爱的牢。</em></h1>
-              <p className="lede">每轮从 {questions.length} 道题库抽取 13 题，所有偏好都可多选；并行计算颜值与手感，最后给出 6 个专精与 3 个职业方向。</p>
+              <p className="lede">13 个固定方向分别从自己的题池抽 1 题（共 {questions.length} 题），所有偏好都可按顺序多选；最后给出 6 个专精与 3 个职业方向。</p>
               <div className="hero-actions">
                 <button className="hero-button" type="button" onClick={begin}>开始测试 <span>约 2 分钟</span></button>
                 <button className="text-button" type="button" onClick={openAtlas}>先看职业图鉴</button>
@@ -157,7 +157,7 @@ function App() {
 
             <div className="question-block">
               <div className="question-copy">
-                <p className={`kicker ${question.category}`}>{question.eyebrow}</p>
+                <p className={`kicker ${question.category}`}>方向 {question.slot}/13 · {question.group}<small>{question.eyebrow}</small></p>
                 <h2>{question.title}</h2>
                 <p className="question-description">{question.description}</p>
               </div>
@@ -166,11 +166,11 @@ function App() {
                   <button type="button" aria-pressed={answers[question.id]?.includes(option.id) ?? false} className={answers[question.id]?.includes(option.id) ? 'option-card selected' : 'option-card'} onClick={() => toggleAnswer(option.id)} key={option.id} style={option.accent ? { '--option-accent': option.accent } as React.CSSProperties : undefined}>
                     <span className="option-key">{String(index + 1).padStart(2, '0')}</span>
                     <span><strong>{option.accent && <i className="option-dot" />} {option.label}</strong><small>{option.hint}</small>{option.swatches && <span className="option-swatches">{option.swatches.map((swatch) => <i key={swatch.label}><b style={{ background:swatch.color }} />{swatch.label}</i>)}</span>}</span>
-                    <span className="option-check" aria-hidden="true">{answers[question.id]?.includes(option.id) ? '✓' : '+'}</span>
+                    <span className={answers[question.id]?.includes(option.id) ? 'option-check chosen' : 'option-check'} aria-label={answers[question.id]?.includes(option.id) ? `第 ${(answers[question.id]?.indexOf(option.id) ?? 0) + 1} 优先` : '未选择'}>{answers[question.id]?.includes(option.id) ? (answers[question.id]?.indexOf(option.id) ?? 0) + 1 : ''}</span>
                   </button>
                 ))}
               </div>
-              <div className="quiz-next"><span>可多选 · “我无所谓”会清除其他选择</span><button className="primary-button" type="button" disabled={!answers[question.id]?.length} onClick={nextQuestion}>{step === sessionQuestions.length - 1 ? '查看结果' : '下一题'} →</button></div>
+              <div className="quiz-next"><span>可多选 · 点击顺序就是偏好优先级 · “我无所谓”会清除其他选择</span><button className="primary-button" type="button" disabled={!answers[question.id]?.length} onClick={nextQuestion}>{step === sessionQuestions.length - 1 ? '查看结果' : '下一题'} →</button></div>
             </div>
           </section>
         )}
@@ -229,7 +229,7 @@ function App() {
           <section className="atlas-screen">
             <div className="atlas-heading">
               <div><p className="kicker">至暗之夜 12.x · 体验档案</p><h1>全天赋六维评分</h1></div>
-              <p>数值采用 0.0—9.0 的九分制，并细分到 0.1：9.0 表示要求更多、上限更高或能力更强，不代表当前版本输出强度。</p>
+              <p>数值采用 0.0 至 9.0 的九分制，并细分到 0.1。9.0 表示要求更多、上限更高或能力更强，不代表当前版本输出强度。</p>
             </div>
             <div className="atlas-toolbar">
               <div className="atlas-tabs" role="tablist" aria-label="评分类型">
@@ -281,7 +281,7 @@ function App() {
                 </article>
               </div>
             )}
-            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.x。六维分数综合官方重做目标、当前专精指南与玩家实战讨论后逐项校准；属于面向选角的相对体验评分，不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 更新汇总</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：12.x 职业指南</a><a href="https://www.wowhead.com/guides/classes" target="_blank" rel="noreferrer">Wowhead：12.x 职业指南</a><a href="https://www.reddit.com/r/wow/comments/1tk9be5/how_would_you_rank_the_difficulty_of_specs_youve/" target="_blank" rel="noreferrer">社区：Midnight 专精难度讨论</a></div></aside>
+            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.0.5。六维分数与手感标签综合官方改动、当前专精指南和玩家实战讨论逐项校准；背景考据只影响颜值题，发生冲突时以当前游戏体验为准。本页不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 更新汇总</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：12.0.5 职业指南</a><a href="https://www.wowhead.com/news/class-guides-now-updated-for-patch-12-0-5-bonus-rolls-and-voidcore-upgrades-381310" target="_blank" rel="noreferrer">Wowhead：12.0.5 指南更新</a><a href="https://www.reddit.com/r/wow/comments/1tk9be5/how_would_you_rank_the_difficulty_of_specs_youve/" target="_blank" rel="noreferrer">社区：Midnight 专精难度讨论</a></div></aside>
           </section>
         )}
 

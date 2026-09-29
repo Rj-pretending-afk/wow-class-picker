@@ -28,11 +28,16 @@ function questionFit(spec: SpecProfile, question: Question, optionIds: string[])
   if (!concrete.length) return { fit: 0, reasons: [] as string[], ignored: true }
   const results = concrete.map((optionId) => optionFit(spec, question, optionId)).filter((result) => !result.ignored)
   if (!results.length) return { fit: 0, reasons: [] as string[], ignored: true }
-  const sorted = [...results].sort((a, b) => b.fit - a.fit)
-  const average = results.reduce((sum, result) => sum + result.fit, 0) / results.length
-  // 多选按“最佳命中 75% + 全部偏好覆盖 25%”聚合，既允许兼容偏好，也避免全选刷高分。
-  const fit = sorted[0].fit * .75 + average * .25
-  return { fit, reasons: sorted.filter((result) => result.fit >= .72 && result.reason).map((result) => result.reason), ignored: false }
+  // 点击顺序就是偏好顺序：每后一项权重衰减到前一项的 62%，再归一化。
+  // 两项约为 62% / 38%，三项约为 50% / 31% / 19%，既表达优先级，也不让次选失去意义。
+  const weighted = results.map((result, index) => ({ ...result, weight:Math.pow(.62, index) }))
+  const totalWeight = weighted.reduce((sum, result) => sum + result.weight, 0)
+  const fit = weighted.reduce((sum, result) => sum + result.fit * result.weight, 0) / totalWeight
+  const reasons = weighted
+    .filter((result) => result.fit >= .72 && result.reason)
+    .sort((a, b) => b.fit * b.weight - a.fit * a.weight)
+    .map((result) => result.reason)
+  return { fit, reasons, ignored: false }
 }
 
 function optionFit(spec: SpecProfile, question: Question, optionId: string) {

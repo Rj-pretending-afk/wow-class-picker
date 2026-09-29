@@ -46,6 +46,7 @@ export interface ClassProfile {
 export interface Question {
   id: string
   category: 'looks' | 'feel'
+  slot: number
   group: string
   required?: boolean
   eyebrow: string

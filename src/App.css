@@ -30,6 +30,7 @@ body { background:radial-gradient(38rem 38rem at 8% 18%,rgba(232,183,92,.11),tra
 main { flex:1; }
 .kicker { color:var(--gold); letter-spacing:.2em; font-size:14px; margin:0 0 16px; }
 .kicker.looks { color:var(--gold); } .kicker.feel { color:var(--void-soft); }
+.kicker small { display:block; margin-top:7px; color:var(--dim); font-size:12px; font-weight:400; letter-spacing:.08em; }
 h1,h2,h3,p { margin-top:0; }
 h1,.result-heading h2,.question-block h2,.detail-modal h2,.winner h3 { font-family:'RjDark',Georgia,serif; font-weight:900; }
 
@@ -88,7 +89,10 @@ h1 em { color:var(--gold); font-style:normal; }
 .option-chevron { color:#6f6785; font-size:22px; }
 .option-card:hover .option-chevron { color:var(--gold); }
 .option-dot { display:inline-block; width:10px; height:10px; margin-right:7px; border-radius:50%; background:var(--option-accent); box-shadow:0 0 12px color-mix(in srgb,var(--option-accent) 65%,transparent); }
-.option-check { width:30px; height:30px; display:grid; place-items:center; border:1px solid #4a4260; border-radius:50%; color:#8f87a0; font-size:18px; }
+.option-check { position:relative; width:30px; height:30px; display:grid; place-items:center; box-sizing:border-box; border:1px solid #4a4260; border-radius:50%; color:#8f87a0; font:700 13px/1 Arial,sans-serif; }
+.option-check:not(.chosen)::before,.option-check:not(.chosen)::after { content:""; position:absolute; left:50%; top:50%; width:10px; height:1.5px; border-radius:1px; background:#8f87a0; transform:translate(-50%,-50%); }
+.option-check:not(.chosen)::after { transform:translate(-50%,-50%) rotate(90deg); }
+.option-card:hover .option-check:not(.chosen)::before,.option-card:hover .option-check:not(.chosen)::after { background:var(--option-accent,var(--gold)); }
 .option-card.selected .option-check { color:#171009; border-color:var(--option-accent,var(--gold)); background:var(--option-accent,var(--gold)); }
 .option-swatches { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
 .option-swatches i { display:inline-flex; align-items:center; gap:5px; color:var(--dim); font-size:12px; font-style:normal; }
