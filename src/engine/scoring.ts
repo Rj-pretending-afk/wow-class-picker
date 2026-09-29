@@ -1,5 +1,4 @@
 import { classProfiles } from '../data/classes'
-import { questions } from '../data/questions'
 import { specs } from '../data/specs'
 import type { Answers, IndifferenceSummary, MetricKey, Question, RadarMetricKey, RankedClass, RankedSpec, SpecProfile } from '../types'
 
@@ -17,11 +16,23 @@ export function getClassRadar(className: string): Record<RadarMetricKey, number>
   return Object.fromEntries(keys.map((key) => [key, Number((ownSpecs.reduce((sum, spec) => sum + spec.metrics[key], 0) / ownSpecs.length).toFixed(1))])) as Record<RadarMetricKey, number>
 }
 
-export function getIndifferenceSummary(answers: Answers): IndifferenceSummary {
-  const count = questions.filter((question) => answers[question.id] === 'any').length
-  const total = questions.length
+export function getIndifferenceSummary(answers: Answers, activeQuestions: Question[]): IndifferenceSummary {
+  const count = activeQuestions.filter((question) => answers[question.id]?.includes('any')).length
+  const total = activeQuestions.length
   const ratio = total ? count / total : 0
   return { count, total, ratio, isHigh: ratio >= INDIFFERENCE_CLASS_THRESHOLD }
+}
+
+function questionFit(spec: SpecProfile, question: Question, optionIds: string[]) {
+  const concrete = optionIds.filter((optionId) => optionId !== 'any')
+  if (!concrete.length) return { fit: 0, reasons: [] as string[], ignored: true }
+  const results = concrete.map((optionId) => optionFit(spec, question, optionId)).filter((result) => !result.ignored)
+  if (!results.length) return { fit: 0, reasons: [] as string[], ignored: true }
+  const sorted = [...results].sort((a, b) => b.fit - a.fit)
+  const average = results.reduce((sum, result) => sum + result.fit, 0) / results.length
+  // 多选按“最佳命中 75% + 全部偏好覆盖 25%”聚合，既允许兼容偏好，也避免全选刷高分。
+  const fit = sorted[0].fit * .75 + average * .25
+  return { fit, reasons: sorted.filter((result) => result.fit >= .72 && result.reason).map((result) => result.reason), ignored: false }
 }
 
 function optionFit(spec: SpecProfile, question: Question, optionId: string) {
@@ -58,33 +69,33 @@ function optionFit(spec: SpecProfile, question: Question, optionId: string) {
   return { fit: signals.reduce((sum, value) => sum + value, 0) / signals.length, reason, ignored: false }
 }
 
-function categoryFit(spec: SpecProfile, answers: Answers, category: Question['category']) {
-  const relevant = questions.filter((question) => question.category === category && answers[question.id] && answers[question.id] !== 'any')
+function categoryFit(spec: SpecProfile, answers: Answers, category: Question['category'], activeQuestions: Question[]) {
+  const relevant = activeQuestions.filter((question) => question.category === category && answers[question.id]?.some((id) => id !== 'any'))
   if (!relevant.length) return 50
-  const fits = relevant.map((question) => optionFit(spec, question, answers[question.id]).fit)
-  return Math.round((fits.reduce((sum, value) => sum + value, 0) / fits.length) * 100)
+  const fits = relevant.map((question) => ({ fit: questionFit(spec, question, answers[question.id]).fit, weight: question.id === 'role' ? 1.35 : 1 }))
+  const totalWeight = fits.reduce((sum, item) => sum + item.weight, 0)
+  return Math.round((fits.reduce((sum, item) => sum + item.fit * item.weight, 0) / totalWeight) * 100)
 }
 
-export function rankSpecs(answers: Answers): RankedSpec[] {
+export function rankSpecs(answers: Answers, activeQuestions: Question[]): RankedSpec[] {
   return specs.map((spec) => {
-    const looksMatch = categoryFit(spec, answers, 'looks')
-    const feelMatch = categoryFit(spec, answers, 'feel')
+    const looksMatch = categoryFit(spec, answers, 'looks', activeQuestions)
+    const feelMatch = categoryFit(spec, answers, 'feel', activeQuestions)
     const match = Math.round((looksMatch + feelMatch) / 2)
-    const reasons = questions
-      .filter((question) => answers[question.id] && answers[question.id] !== 'any')
-      .map((question) => optionFit(spec, question, answers[question.id]))
-      .filter((result) => result.fit >= .72 && result.reason)
+    const reasons = activeQuestions
+      .filter((question) => answers[question.id]?.some((id) => id !== 'any'))
+      .map((question) => questionFit(spec, question, answers[question.id]))
       .sort((a, b) => b.fit - a.fit)
-      .map((result) => result.reason)
+      .flatMap((result) => result.reasons)
     const uniqueReasons = [...new Set(reasons)].slice(0, 3)
     if (uniqueReasons.length < 2) uniqueReasons.push(spec.summary)
     return { ...spec, score: looksMatch + feelMatch, match, looksMatch, feelMatch, reasons: uniqueReasons.slice(0, 3) }
   }).sort((a, b) => b.score - a.score || b.feelMatch - a.feelMatch)
 }
 
-export function rankClasses(answers: Answers): RankedClass[] {
-  const rankedSpecs = rankSpecs(answers)
-  const indifference = getIndifferenceSummary(answers)
+export function rankClasses(answers: Answers, activeQuestions: Question[]): RankedClass[] {
+  const rankedSpecs = rankSpecs(answers, activeQuestions)
+  const indifference = getIndifferenceSummary(answers, activeQuestions)
 
   return classProfiles.map((profile) => {
     const ownSpecs = rankedSpecs.filter((spec) => spec.className === profile.name).sort((a, b) => b.match - a.match)
@@ -101,6 +112,6 @@ export function rankClasses(answers: Answers): RankedClass[] {
   }).sort((a, b) => b.match - a.match || b.versatility - a.versatility)
 }
 
-export function getSpecRecommendations(answers: Answers, limit = 6): RankedSpec[] {
-  return rankSpecs(answers).slice(0, limit)
+export function getSpecRecommendations(answers: Answers, activeQuestions: Question[], limit = 6): RankedSpec[] {
+  return rankSpecs(answers, activeQuestions).slice(0, limit)
 }

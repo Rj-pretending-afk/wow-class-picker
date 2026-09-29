@@ -4,12 +4,12 @@ import { ClassIcon } from './components/ClassIcon'
 import { Compass } from './components/Compass'
 import { RadarChart } from './components/RadarChart'
 import { classProfileMap, classProfiles } from './data/classes'
-import { questions } from './data/questions'
+import { createQuestionSet, questions } from './data/questions'
 import { radarMetrics } from './data/radar'
-import { sinProfiles, sinQuestions } from './data/sins'
+import { createSinQuestionSet, sinProfiles, sinQuestions } from './data/sins'
 import { specs } from './data/specs'
 import { getClassRadar, getIndifferenceSummary, getRangeLabel, getRoleLabel, getSpecRecommendations, rankClasses } from './engine/scoring'
-import type { Answers, RankedSpec, SinKey } from './types'
+import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
@@ -20,46 +20,70 @@ function App() {
   const [screen, setScreen] = useState<Screen>('start')
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
+  const [sessionQuestions, setSessionQuestions] = useState(createQuestionSet)
   const [selected, setSelected] = useState<RankedSpec | null>(null)
   const [atlasTab, setAtlasTab] = useState<'specs' | 'classes'>('specs')
   const [atlasClass, setAtlasClass] = useState('全部')
+  const [atlasRole, setAtlasRole] = useState<Role | '全部'>('全部')
+  const [atlasRange, setAtlasRange] = useState<Range | '全部'>('全部')
+  const [atlasSortMetrics, setAtlasSortMetrics] = useState<RadarMetricKey[]>([])
+  const [atlasSortDirection, setAtlasSortDirection] = useState<'desc' | 'asc'>('desc')
   const [atlasPick, setAtlasPick] = useState(classProfiles[1].name)
   const [sinStage, setSinStage] = useState<SinStage>('intro')
   const [sinStep, setSinStep] = useState(0)
   const [sinScores, setSinScores] = useState<Partial<Record<SinKey, number>>>({})
-  const question = questions[step]
-  const results = useMemo(() => getSpecRecommendations(answers), [answers])
-  const classResults = useMemo(() => rankClasses(answers).slice(0, 3), [answers])
-  const indifference = useMemo(() => getIndifferenceSummary(answers), [answers])
-  const filteredSpecs = atlasClass === '全部' ? specs : specs.filter((spec) => spec.className === atlasClass)
+  const [sessionSinQuestions, setSessionSinQuestions] = useState(createSinQuestionSet)
+  const question = sessionQuestions[step]
+  const results = useMemo(() => getSpecRecommendations(answers, sessionQuestions), [answers, sessionQuestions])
+  const classResults = useMemo(() => rankClasses(answers, sessionQuestions).slice(0, 3), [answers, sessionQuestions])
+  const indifference = useMemo(() => getIndifferenceSummary(answers, sessionQuestions), [answers, sessionQuestions])
+  const filteredSpecs = useMemo(() => {
+    const metricScore = (spec: (typeof specs)[number]) => {
+      const keys = atlasSortMetrics.length ? atlasSortMetrics : radarMetrics.map(({ key }) => key)
+      return keys.reduce((sum, key) => sum + spec.metrics[key], 0) / keys.length
+    }
+    return specs
+      .filter((spec) => atlasClass === '全部' || spec.className === atlasClass)
+      .filter((spec) => atlasRole === '全部' || spec.role === atlasRole)
+      .filter((spec) => atlasRange === '全部' || spec.range === atlasRange)
+      .sort((a, b) => (metricScore(a) - metricScore(b)) * (atlasSortDirection === 'asc' ? 1 : -1) || a.specName.localeCompare(b.specName, 'zh-CN'))
+  }, [atlasClass, atlasRole, atlasRange, atlasSortMetrics, atlasSortDirection])
   const pickedProfile = classProfileMap.get(atlasPick) ?? classProfiles[0]
   const sinResult = useMemo(() => [...sinProfiles].sort((a, b) => (sinScores[b.key] ?? 0) - (sinScores[a.key] ?? 0))[0], [sinScores])
+  const atlasScore = (spec: (typeof specs)[number]) => {
+    const keys = atlasSortMetrics.length ? atlasSortMetrics : radarMetrics.map(({ key }) => key)
+    return keys.reduce((sum, key) => sum + spec.metrics[key], 0) / keys.length
+  }
 
-  const looksDone = questions.slice(0, step).filter((item) => item.category === 'looks').length
-  const feelDone = questions.slice(0, step).filter((item) => item.category === 'feel').length
-  const looksTotal = questions.filter((item) => item.category === 'looks').length
-  const feelTotal = questions.filter((item) => item.category === 'feel').length
+  const looksDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'looks').length
+  const feelDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'feel').length
+  const looksTotal = sessionQuestions.filter((item) => item.category === 'looks').length
+  const feelTotal = sessionQuestions.filter((item) => item.category === 'feel').length
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }) }, [screen, step, atlasTab, sinStage, sinStep])
 
-  const begin = () => { setAnswers({}); setStep(0); setSelected(null); setScreen('quiz') }
-  const answerQuestion = (optionId: string) => {
-    setAnswers((current) => ({ ...current, [question.id]: optionId }))
-    if (step === questions.length - 1) setScreen('result')
-    else setStep((current) => current + 1)
+  const begin = () => { setSessionQuestions(createQuestionSet()); setAnswers({}); setStep(0); setSelected(null); setScreen('quiz') }
+  const toggleAnswer = (optionId: string) => {
+    setAnswers((current) => {
+      const chosen = current[question.id] ?? []
+      if (optionId === 'any') return { ...current, [question.id]: chosen.includes('any') ? [] : ['any'] }
+      const withoutNeutral = chosen.filter((id) => id !== 'any')
+      return { ...current, [question.id]: withoutNeutral.includes(optionId) ? withoutNeutral.filter((id) => id !== optionId) : [...withoutNeutral, optionId] }
+    })
   }
+  const nextQuestion = () => step === sessionQuestions.length - 1 ? setScreen('result') : setStep((current) => current + 1)
   const goBack = () => step === 0 ? setScreen('start') : setStep((current) => current - 1)
   const restart = () => { setSelected(null); setAnswers({}); setStep(0); setScreen('start') }
   const openAtlas = () => { setSelected(null); setScreen('atlas') }
   const openEaster = () => { setSinStage('intro'); setSinStep(0); setSinScores({}); setScreen('easter') }
-  const beginSin = () => { setSinStage('quiz'); setSinStep(0); setSinScores({}) }
+  const beginSin = () => { setSessionSinQuestions(createSinQuestionSet()); setSinStage('quiz'); setSinStep(0); setSinScores({}) }
   const answerSin = (scores: Partial<Record<SinKey, number>>) => {
     setSinScores((current) => {
       const next = { ...current }
       Object.entries(scores).forEach(([key, value]) => { next[key as SinKey] = (next[key as SinKey] ?? 0) + Number(value) })
       return next
     })
-    if (sinStep === sinQuestions.length - 1) setSinStage('result')
+    if (sinStep === sessionSinQuestions.length - 1) setSinStage('result')
     else setSinStep((current) => current + 1)
   }
 
@@ -108,7 +132,7 @@ function App() {
             <div className="intro-copy">
               <p className="axis-kicker"><span className="looks">颜值</span><i /><b>×</b><i /><span className="feel">手感</span><em>双轴匹配</em></p>
               <h1>坐牢，<br /><em>坐最爱的牢。</em></h1>
-              <p className="lede">{questions.length} 道问题选择你最爱的牢房(天赋)，并行计算颜值与手感评分，最后给出 6 个专精与 3 个职业方向。</p>
+              <p className="lede">每轮从 {questions.length} 道题库抽取 13 题，所有偏好都可多选；并行计算颜值与手感，最后给出 6 个专精与 3 个职业方向。</p>
               <div className="hero-actions">
                 <button className="hero-button" type="button" onClick={begin}>开始测试 <span>约 2 分钟</span></button>
                 <button className="text-button" type="button" onClick={openAtlas}>先看职业图鉴</button>
@@ -123,7 +147,7 @@ function App() {
             <div className="quiz-meta">
               <button className="text-button" type="button" onClick={goBack}>‹ 上一步</button>
               <span>{indifference.count ? `我无所谓 ${indifference.count} 题` : question.category === 'looks' ? '颜值正在计分' : '手感正在计分'}</span>
-              <span>{step + 1} / {questions.length}</span>
+              <span>{step + 1} / {sessionQuestions.length}</span>
             </div>
 
             <div className="dual-progress">
@@ -139,13 +163,14 @@ function App() {
               </div>
               <div className="option-list" role="group" aria-label={question.title}>
                 {question.options.map((option, index) => (
-                  <button type="button" className={answers[question.id] === option.id ? 'option-card selected' : 'option-card'} onClick={() => answerQuestion(option.id)} key={option.id}>
+                  <button type="button" aria-pressed={answers[question.id]?.includes(option.id) ?? false} className={answers[question.id]?.includes(option.id) ? 'option-card selected' : 'option-card'} onClick={() => toggleAnswer(option.id)} key={option.id} style={option.accent ? { '--option-accent': option.accent } as React.CSSProperties : undefined}>
                     <span className="option-key">{String(index + 1).padStart(2, '0')}</span>
-                    <span><strong>{option.label}</strong><small>{option.hint}</small></span>
-                    <span className="option-chevron" aria-hidden="true">›</span>
+                    <span><strong>{option.accent && <i className="option-dot" />} {option.label}</strong><small>{option.hint}</small>{option.swatches && <span className="option-swatches">{option.swatches.map((swatch) => <i key={swatch.label}><b style={{ background:swatch.color }} />{swatch.label}</i>)}</span>}</span>
+                    <span className="option-check" aria-hidden="true">{answers[question.id]?.includes(option.id) ? '✓' : '+'}</span>
                   </button>
                 ))}
               </div>
+              <div className="quiz-next"><span>可多选 · “我无所谓”会清除其他选择</span><button className="primary-button" type="button" disabled={!answers[question.id]?.length} onClick={nextQuestion}>{step === sessionQuestions.length - 1 ? '查看结果' : '下一题'} →</button></div>
             </div>
           </section>
         )}
@@ -211,19 +236,32 @@ function App() {
                 <button type="button" role="tab" aria-selected={atlasTab === 'specs'} className={atlasTab === 'specs' ? 'active' : ''} onClick={() => setAtlasTab('specs')}>专精 · 40</button>
                 <button type="button" role="tab" aria-selected={atlasTab === 'classes'} className={atlasTab === 'classes' ? 'active' : ''} onClick={() => setAtlasTab('classes')}>职业 · 13</button>
               </div>
-              {atlasTab === 'specs' && <label className="class-filter">筛选职业<select value={atlasClass} onChange={(event) => setAtlasClass(event.target.value)}><option>全部</option>{classProfiles.map((item) => <option key={item.name}>{item.name}</option>)}</select></label>}
+              {atlasTab === 'specs' && <span className="atlas-count">当前 {filteredSpecs.length} 个专精</span>}
             </div>
             {atlasTab === 'specs' ? (
+              <>
+              <div className="atlas-controls">
+                <div className="atlas-filter-row">
+                  <label className="class-filter">职业<select value={atlasClass} onChange={(event) => setAtlasClass(event.target.value)}><option>全部</option>{classProfiles.map((item) => <option key={item.name}>{item.name}</option>)}</select></label>
+                  <label className="class-filter">职责<select value={atlasRole} onChange={(event) => setAtlasRole(event.target.value as Role | '全部')}><option>全部</option><option value="tank">坦克</option><option value="healer">治疗</option><option value="melee">近战输出</option><option value="ranged">远程输出</option><option value="support">辅助输出</option></select></label>
+                  <label className="class-filter">距离<select value={atlasRange} onChange={(event) => setAtlasRange(event.target.value as Range | '全部')}><option>全部</option><option value="melee">贴身近战</option><option value="mid">中距离</option><option value="ranged">远程</option></select></label>
+                  <label className="class-filter">方向<select value={atlasSortDirection} onChange={(event) => setAtlasSortDirection(event.target.value as 'asc' | 'desc')}><option value="desc">高分优先</option><option value="asc">低分优先</option></select></label>
+                </div>
+                <div className="metric-sort-row"><span>组合排序</span><div>{radarMetrics.map(({ key, label }) => <button type="button" aria-pressed={atlasSortMetrics.includes(key)} className={atlasSortMetrics.includes(key) ? 'active' : ''} onClick={() => setAtlasSortMetrics((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} key={key}>{label}</button>)}</div><button className="reset-sort" type="button" onClick={() => { setAtlasClass('全部'); setAtlasRole('全部'); setAtlasRange('全部'); setAtlasSortMetrics([]); setAtlasSortDirection('desc') }}>重置</button></div>
+                <p className="sort-help">{atlasSortMetrics.length ? `按 ${atlasSortMetrics.map((key) => radarMetrics.find((metric) => metric.key === key)?.label).join(' + ')} 的平均分${atlasSortDirection === 'desc' ? '从高到低' : '从低到高'}排列。` : `未选择维度：按六维平均分${atlasSortDirection === 'desc' ? '从高到低' : '从低到高'}排列。选择多个维度时取等权平均。`}</p>
+              </div>
               <div className="atlas-grid">
                 {filteredSpecs.map((spec) => (
                   <article className="atlas-card" key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
-                    <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}</small></div>
+                    <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}<b className="sort-score">排序分 {formatMetric(atlasScore(spec))}</b></small></div>
                     <p>{spec.summary}</p>
                     <RadarChart values={spec.metrics} color={spec.color} label={`${spec.className}${spec.specName}`} />
                     <div className="atlas-numbers">{radarMetrics.map(({ key, label }) => <span key={key}>{label}<b>{formatMetric(spec.metrics[key])}</b></span>)}</div>
                   </article>
                 ))}
               </div>
+              {!filteredSpecs.length && <p className="empty-atlas">没有同时符合这些筛选条件的专精。</p>}
+              </>
             ) : (
               <div className="class-atlas">
                 <div className="class-tiles">
@@ -243,19 +281,19 @@ function App() {
                 </article>
               </div>
             )}
-            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.x。上手难度与操作上限参考暴雪的 Midnight 重做目标、12.x 更新说明，以及 Wowhead / Icy Veins 当前专精指南后统一校准；属于面向选角的相对评分。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 战斗与天赋更新</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：Midnight 职业指南</a><a href="https://www.wowhead.com/guides/classes" target="_blank" rel="noreferrer">Wowhead：Midnight 职业指南</a></div></aside>
+            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.x。六维分数综合官方重做目标、当前专精指南与玩家实战讨论后逐项校准；属于面向选角的相对体验评分，不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 更新汇总</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：12.x 职业指南</a><a href="https://www.wowhead.com/guides/classes" target="_blank" rel="noreferrer">Wowhead：12.x 职业指南</a><a href="https://www.reddit.com/r/wow/comments/1tk9be5/how_would_you_rank_the_difficulty_of_specs_youve/" target="_blank" rel="noreferrer">社区：Midnight 专精难度讨论</a></div></aside>
           </section>
         )}
 
         {screen === 'easter' && (
           <section className="sin-screen">
-            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不正经 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">七个问题，判断你在团本、幻化与伤害统计面前最难抵抗哪一种诱惑。结果纯属恶搞。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
+            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不正经 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">每轮从 {sinQuestions.length} 份罪证抽取 12 题，横跨团本、地下城、PvP、日常、社交与家园。七个方向只可单选，结果纯属恶搞。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
-                <div className="sin-progress"><span>罪证 {sinStep + 1} / {sinQuestions.length}</span><i><em style={{ width:`${(sinStep + 1) / sinQuestions.length * 100}%` }} /></i></div>
-                <p className="kicker">七宗罪 · 第 {sinStep + 1} 份口供</p>
-                <h2>{sinQuestions[sinStep].title}</h2><p>{sinQuestions[sinStep].description}</p>
-                <div className="option-list">{sinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option.scores)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
+                <div className="sin-progress"><span>罪证 {sinStep + 1} / {sessionSinQuestions.length}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
+                <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context}口供</p>
+                <h2>{sessionSinQuestions[sinStep].title}</h2><p>{sessionSinQuestions[sinStep].description}</p>
+                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option.scores)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
               </div>
             )}
             {sinStage === 'result' && (

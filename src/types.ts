@@ -30,6 +30,8 @@ export interface QuestionOption {
   label: string
   hint: string
   effect: AnswerEffect
+  accent?: string
+  swatches?: { label: string; color: string }[]
 }
 
 export interface ClassProfile {
@@ -44,13 +46,15 @@ export interface ClassProfile {
 export interface Question {
   id: string
   category: 'looks' | 'feel'
+  group: string
+  required?: boolean
   eyebrow: string
   title: string
   description: string
   options: QuestionOption[]
 }
 
-export type Answers = Record<string, string>
+export type Answers = Record<string, string[]>
 
 export interface RankedSpec extends SpecProfile {
   score: number
@@ -85,6 +89,7 @@ export interface SinOption {
 
 export interface SinQuestion {
   id: string
+  context: '团本' | '地下城' | 'PvP' | '日常' | '家园' | '社交'
   title: string
   description: string
   options: SinOption[]

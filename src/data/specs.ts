@@ -53,22 +53,37 @@ const raw: RawSpec[] = [
   ['protection-warrior','战士','防护','tank','melee',[4,4,4,5,3,5],'martial plate shield explosive','以盾牌、冲锋和怒吼正面接管战场。','物理防御扎实，冲锋与盾击带来强烈坦克反馈。','自我治疗较少，需要主动维持减伤。'],
 ]
 
-// 12.x（至暗之夜）校准：上手难度、操作上限、团队功能。
-// 评分来自 2026-09 对正式服职业指南、重做说明与当前循环的编辑评估；9 代表更多要求/更高上限/更多工具，并非强度排名。
-const skillScores: Record<string, [number, number, number]> = {
-  'blood-dk':[3,5,4], 'frost-dk':[2,4,2], 'unholy-dk':[4,5,3],
-  'havoc-dh':[3,5,3], 'vengeance-dh':[3,5,4], 'devourer-dh':[2,4,3],
-  'balance-druid':[3,4,4], 'feral-druid':[4,5,3], 'guardian-druid':[1,4,3], 'restoration-druid':[4,5,5],
-  'devastation-evoker':[2,4,3], 'preservation-evoker':[4,5,5], 'augmentation-evoker':[3,5,5],
-  'beast-mastery-hunter':[1,3,4], 'marksmanship-hunter':[2,4,3], 'survival-hunter':[3,4,4],
-  'arcane-mage':[4,5,3], 'fire-mage':[3,5,3], 'frost-mage':[2,4,4],
-  'brewmaster-monk':[4,5,5], 'mistweaver-monk':[4,5,5], 'windwalker-monk':[3,5,3],
-  'holy-paladin':[3,5,5], 'protection-paladin':[3,5,5], 'retribution-paladin':[1,4,4],
-  'discipline-priest':[5,5,5], 'holy-priest':[2,4,4], 'shadow-priest':[4,5,4],
-  'assassination-rogue':[3,5,4], 'outlaw-rogue':[4,5,4], 'subtlety-rogue':[5,5,4],
-  'elemental-shaman':[2,4,5], 'enhancement-shaman':[4,5,5], 'restoration-shaman':[3,5,5],
-  'affliction-warlock':[4,5,4], 'demonology-warlock':[3,5,4], 'destruction-warlock':[1,4,4],
-  'arms-warrior':[2,4,3], 'fury-warrior':[1,3,3], 'protection-warrior':[3,5,4],
+// 12.x 六维人工校准：[上手难度, 操作上限, 操作节奏, 机动, 生存, 团队功能]。
+// 综合官方重做目标、当前指南与玩家实战讨论，保留一位小数并主动拉开分布；它描述体验而非版本强度。
+const sixAxisRatings: Record<string, [number, number, number, number, number, number]> = {
+  'blood-dk':[6.6,8.3,6.2,2.4,8.6,7.7], 'frost-dk':[4.4,7.0,7.1,2.3,7.3,4.8], 'unholy-dk':[6.8,8.0,6.8,2.5,7.2,5.4],
+  'havoc-dh':[5.8,8.1,8.4,9.0,6.0,5.2], 'vengeance-dh':[6.0,8.2,7.4,8.8,7.8,7.5], 'devourer-dh':[7.2,8.7,7.1,8.5,6.6,5.7],
+  'balance-druid':[5.7,7.7,5.8,7.0,5.8,7.3], 'feral-druid':[7.1,8.5,8.1,8.5,5.7,5.2], 'guardian-druid':[3.2,6.6,5.5,6.7,8.1,6.2], 'restoration-druid':[7.0,8.8,7.5,8.7,5.9,8.5],
+  'devastation-evoker':[4.6,7.2,6.8,8.4,5.8,5.9], 'preservation-evoker':[7.4,8.9,7.5,8.5,5.9,8.7], 'augmentation-evoker':[6.3,8.5,6.0,8.2,6.0,9.0],
+  'beast-mastery-hunter':[2.3,5.7,6.9,9.0,6.6,6.5], 'marksmanship-hunter':[2.8,6.3,4.7,5.0,5.4,5.9], 'survival-hunter':[5.2,7.6,8.0,8.6,6.4,7.0],
+  'arcane-mage':[7.3,8.8,5.6,6.8,4.9,7.1], 'fire-mage':[6.0,8.5,8.3,8.7,4.7,6.8], 'frost-mage':[4.5,7.2,6.7,7.8,5.5,7.4],
+  'brewmaster-monk':[7.0,8.8,8.1,8.3,7.3,8.3], 'mistweaver-monk':[7.2,8.8,8.0,8.5,5.8,8.4], 'windwalker-monk':[5.9,8.0,8.2,8.8,5.8,6.0],
+  'holy-paladin':[6.2,8.6,6.8,5.5,8.0,8.8], 'protection-paladin':[5.8,8.4,7.1,5.3,8.5,9.0], 'retribution-paladin':[2.9,6.6,5.8,5.1,7.8,7.5],
+  'discipline-priest':[8.0,9.0,7.2,5.6,4.8,8.8], 'holy-priest':[4.1,7.1,5.2,3.8,4.4,8.1], 'shadow-priest':[6.7,8.4,6.5,5.4,5.2,7.5],
+  'assassination-rogue':[5.7,8.0,6.7,8.0,5.9,7.4], 'outlaw-rogue':[6.8,8.6,9.0,8.5,5.8,7.6], 'subtlety-rogue':[7.2,8.7,8.2,8.5,5.8,7.5],
+  'elemental-shaman':[4.3,7.3,6.1,5.9,6.0,8.0], 'enhancement-shaman':[7.0,8.7,9.0,7.4,5.9,8.0], 'restoration-shaman':[5.8,8.2,5.9,5.5,6.7,9.0],
+  'affliction-warlock':[7.0,8.5,5.8,4.0,8.3,7.5], 'demonology-warlock':[5.8,7.9,6.5,4.1,8.4,7.1], 'destruction-warlock':[3.5,6.8,4.1,3.8,8.2,7.3],
+  'arms-warrior':[4.8,7.5,5.7,6.8,6.8,6.2], 'fury-warrior':[2.8,6.1,8.9,7.2,6.9,5.7], 'protection-warrior':[6.1,8.5,7.2,7.5,7.8,8.0],
+}
+
+const loreTags: Record<string, string[]> = {
+  'blood-dk':['death','blood'], 'frost-dk':['death','water'], 'unholy-dk':['death'],
+  'havoc-dh':['fel'], 'vengeance-dh':['fel'], 'devourer-dh':['void'],
+  'balance-druid':['life','order'], 'feral-druid':['life'], 'guardian-druid':['life','earth'], 'restoration-druid':['life','water'],
+  'devastation-evoker':['dragon-red','dragon-blue','fire','arcane'], 'preservation-evoker':['dragon-green','dragon-bronze','life','time'], 'augmentation-evoker':['dragon-black','dragon-bronze','earth','time'],
+  'beast-mastery-hunter':['life'], 'survival-hunter':['life','fire'],
+  'arcane-mage':['order'], 'fire-mage':['fire'], 'frost-mage':['water'],
+  'brewmaster-monk':['spirit'], 'mistweaver-monk':['spirit','life'], 'windwalker-monk':['spirit','air'],
+  'holy-paladin':['light'], 'protection-paladin':['light'], 'retribution-paladin':['light'],
+  'discipline-priest':['light','void'], 'holy-priest':['light'], 'shadow-priest':['void'],
+  'assassination-rogue':['shadow'], 'subtlety-rogue':['shadow'],
+  'elemental-shaman':['fire','water','earth','air','storm'], 'enhancement-shaman':['fire','earth','air','storm'], 'restoration-shaman':['water','spirit'],
+  'affliction-warlock':['shadow'], 'demonology-warlock':['fel'], 'destruction-warlock':['fel','fire'],
 }
 
 const ninePointAnchors = [0, 1.5, 3.2, 5, 7.1, 9]
@@ -83,14 +98,14 @@ const toNinePoint = (value: number) => {
 export const specs: SpecProfile[] = raw.map(([id, className, specName, role, range, values, tagString, fantasy, summary, caution]) => {
   const [armor, color] = classes[className]
   const [pace, legacyComplexity, mobility, survivability, burst, sustained] = values
-  const [difficulty, ceiling, utility] = skillScores[id] ?? [legacyComplexity, Math.min(5, legacyComplexity + 1), 3]
+  const [difficulty, ceiling, calibratedPace, calibratedMobility, calibratedSurvivability, utility] = sixAxisRatings[id] ?? [toNinePoint(legacyComplexity), toNinePoint(Math.min(5, legacyComplexity + 1)), toNinePoint(pace), toNinePoint(mobility), toNinePoint(survivability), 5]
   return {
     id, className, specName, role, range, armor, color,
     metrics: {
-      pace: toNinePoint(pace), difficulty: toNinePoint(difficulty), ceiling: toNinePoint(ceiling),
-      mobility: toNinePoint(mobility), survivability: toNinePoint(survivability), utility: toNinePoint(utility),
+      pace: calibratedPace, difficulty, ceiling,
+      mobility: calibratedMobility, survivability: calibratedSurvivability, utility,
       burst: toNinePoint(burst), sustained: toNinePoint(sustained),
     },
-    tags: tagString.split(' '), fantasy, summary, caution,
+    tags: [...new Set([...tagString.split(' '), ...(loreTags[id] ?? [])])], fantasy, summary, caution,
   }
 })
