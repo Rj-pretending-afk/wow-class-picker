@@ -115,6 +115,8 @@ function App() {
     })
   }
   const nextQuestion = () => step === sessionQuestions.length - 1 ? setScreen('result') : setStep((current) => current + 1)
+  // 七宗罪回到上一题：答案按题目 id 保存，重新选择会直接覆盖，罪名分随之重算。
+  const goBackSin = () => sinStep === 0 ? setSinStage('intro') : setSinStep((current) => current - 1)
   const goBack = () => step === 0 ? setScreen('start') : setStep((current) => current - 1)
   const restart = () => { setSelected(null); setAnswers({}); setStep(0); setScreen('start') }
   const openAtlas = () => { setSelected(null); setScreen('atlas') }
@@ -339,11 +341,12 @@ function App() {
             {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题单选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
+                <div className="sin-meta"><button className="text-button" type="button" onClick={goBackSin}>‹ 上一题</button></div>
                 <div className="sin-progress"><span>罪证 {sessionSinQuestions[sinStep].slot} / {sessionSinQuestions.length} · {sessionSinQuestions[sinStep].group}</span><i><em style={{ width:`${(sinStep + 1) / sessionSinQuestions.length * 100}%` }} /></i></div>
                 <p className="kicker">七宗罪 · {sessionSinQuestions[sinStep].context} · {sessionSinQuestions[sinStep].eyebrow}</p>
                 <h2>{sessionSinQuestions[sinStep].title}</h2><p>{sessionSinQuestions[sinStep].description}</p>
                 <p className="sin-single"><b>单选</b>只能选一个答案，点击后直接进入下一题</p>
-                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className="option-card sin-option" type="button" onClick={() => answerSin(option)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
+                <div className="option-list">{sessionSinQuestions[sinStep].options.map((option, index) => <button className={sinAnswers[sessionSinQuestions[sinStep].id]?.[0] === option.id ? 'option-card sin-option selected' : 'option-card sin-option'} type="button" aria-pressed={sinAnswers[sessionSinQuestions[sinStep].id]?.[0] === option.id} onClick={() => answerSin(option)} key={option.id}><span className="option-key">{String(index + 1).padStart(2,'0')}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span><span className="option-chevron">›</span></button>)}</div>
               </div>
             )}
             {sinStage === 'result' && (
