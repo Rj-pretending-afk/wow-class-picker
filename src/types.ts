@@ -1,6 +1,7 @@
 export type Role = 'tank' | 'healer' | 'melee' | 'ranged' | 'support'
 export type Range = 'melee' | 'ranged' | 'mid'
-export type MetricKey = 'pace' | 'complexity' | 'mobility' | 'survivability' | 'burst' | 'sustained'
+export type RadarMetricKey = 'difficulty' | 'ceiling' | 'pace' | 'mobility' | 'survivability' | 'utility'
+export type MetricKey = RadarMetricKey | 'burst' | 'sustained'
 
 export interface SpecProfile {
   id: string
@@ -71,4 +72,29 @@ export interface IndifferenceSummary {
   total: number
   ratio: number
   isHigh: boolean
+}
+
+export type SinKey = 'pride' | 'greed' | 'lust' | 'envy' | 'wrath' | 'gluttony' | 'sloth'
+
+export interface SinOption {
+  id: string
+  label: string
+  hint: string
+  scores: Partial<Record<SinKey, number>>
+}
+
+export interface SinQuestion {
+  id: string
+  title: string
+  description: string
+  options: SinOption[]
+}
+
+export interface SinProfile {
+  key: SinKey
+  name: string
+  alias: string
+  verdict: string
+  confession: string
+  specs: string[]
 }

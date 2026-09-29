@@ -47,10 +47,20 @@ const baseQuestions: Question[] = [
     { id:'explosive', label:'爆炸感强', hint:'大数字与强烈命中特效', effect:{ tags:['explosive'], metrics:{ burst:5 } } },
     { id:'subtle', label:'干净克制', hint:'武器动作清晰，不满屏闪光', effect:{ tags:['subtle','martial'] } },
   ]},
-  { id:'complexity', category:'feel', eyebrow:'手感 04 · 学习成本', title:'你愿意同时关注多少信息？', description:'包括资源、触发、持续效果和冷却窗口。', options:[
-    { id:'simple', label:'越直观越好', hint:'快速上手，少看监控', effect:{ metrics:{ complexity:2 } } },
-    { id:'medium', label:'适量管理', hint:'愿意学习一套清晰优先级', effect:{ metrics:{ complexity:3 } } },
-    { id:'deep', label:'越有深度越好', hint:'享受规划与多线管理', effect:{ metrics:{ complexity:5 } } },
+  { id:'tracking', category:'feel', eyebrow:'手感 04 · 信息密度', title:'你愿意同时关注多少信息？', description:'资源、触发、持续效果和冷却窗口都会占用注意力。', options:[
+    { id:'simple', label:'越少越好', hint:'专心看战场，不想盯监控', effect:{ metrics:{ difficulty:1, ceiling:2 } } },
+    { id:'medium', label:'适量管理', hint:'一套清晰优先级刚刚好', effect:{ metrics:{ difficulty:3, ceiling:4 } } },
+    { id:'deep', label:'越多越有趣', hint:'享受规划与多线管理', effect:{ metrics:{ difficulty:5, ceiling:5 } } },
+  ]},
+  { id:'difficulty', category:'feel', eyebrow:'手感 05 · 上手难度', title:'你希望多快进入“会玩”的状态？', description:'基于正式服 12.x 重做后的循环与资源门槛，不按旧版本印象判断。', options:[
+    { id:'easy', label:'十分钟就能开打', hint:'核心循环直观，犯错也容易修正', effect:{ metrics:{ difficulty:1 } } },
+    { id:'learn', label:'愿意练一两个晚上', hint:'先学优先级，再逐步理解细节', effect:{ metrics:{ difficulty:3 } } },
+    { id:'hard', label:'难一点才有成就感', hint:'接受高起步门槛与更多同时决策', effect:{ metrics:{ difficulty:5 } } },
+  ]},
+  { id:'ceiling', category:'feel', eyebrow:'手感 06 · 操作上限', title:'玩久以后，你想留下多少钻研空间？', description:'“上限高”表示熟练后仍可通过规划、反应或团队判断继续进步。', options:[
+    { id:'relaxed', label:'稳定发挥就满足', hint:'不追求大量隐藏优化', effect:{ metrics:{ ceiling:2 } } },
+    { id:'room', label:'有一些进阶空间', hint:'主循环清楚，也能继续打磨', effect:{ metrics:{ ceiling:4 } } },
+    { id:'mastery', label:'越能钻研越好', hint:'喜欢长期练习与极限优化', effect:{ metrics:{ ceiling:5 } } },
   ]},
   { id:'identity', category:'looks', eyebrow:'颜值 05 · 角色呈现', title:'战斗时需要看见自己的幻化吗？', description:'有些职业的核心乐趣正是变形或伙伴。', options:[
     { id:'face', label:'必须看见角色', hint:'幻化与武器始终是主角', effect:{ tags:['plate','robe','martial'] } },
@@ -58,15 +68,15 @@ const baseQuestions: Question[] = [
     { id:'pet', label:'伙伴更重要', hint:'让宠物或召唤物撑起画面', effect:{ tags:['pet'] } },
     { id:'any', label:'都可以', hint:'只要整体主题够统一', effect:{} },
   ]},
-  { id:'mobility', category:'feel', eyebrow:'手感 05 · 移动需求', title:'你有多在意机动性？', description:'位移越强，通常越容易修正站位。', options:[
+  { id:'mobility', category:'feel', eyebrow:'手感 07 · 移动需求', title:'你有多在意机动性？', description:'位移越强，通常越容易修正站位。', options:[
     { id:'high', label:'必须非常灵活', hint:'冲锋、闪现、边走边打', effect:{ metrics:{ mobility:5 } } },
     { id:'medium', label:'够用就好', hint:'有一两个可靠位移', effect:{ metrics:{ mobility:3 } } },
     { id:'low', label:'站得住就行', hint:'可以用机动换厚重或射程', effect:{ metrics:{ mobility:1 } } },
   ]},
-  { id:'damage', category:'feel', eyebrow:'手感 06 · 战斗反馈', title:'哪种获胜方式最让你满足？', description:'它会决定循环最有乐趣的部分。', options:[
+  { id:'damage', category:'feel', eyebrow:'手感 08 · 战斗反馈', title:'哪种获胜方式最让你满足？', description:'它会决定循环最有乐趣的部分。', options:[
     { id:'burst', label:'抓住时机爆发', hint:'短时间打出高峰', effect:{ metrics:{ burst:5, sustained:2 }, tags:['explosive'] } },
     { id:'sustain', label:'稳定持续压制', hint:'整场保持顺滑输出', effect:{ metrics:{ burst:2, sustained:5 } } },
-    { id:'dot', label:'经营持续效果', hint:'铺场、流血、疾病或召唤', effect:{ tags:['dot','pet'], metrics:{ complexity:5, sustained:5 } } },
+    { id:'dot', label:'经营持续效果', hint:'铺场、流血、疾病或召唤', effect:{ tags:['dot','pet'], metrics:{ difficulty:4, ceiling:5, sustained:5 } } },
     { id:'support', label:'帮助全队变强', hint:'工具、增益与救场同样重要', effect:{ tags:['support'], roles:['support','healer','tank'] } },
   ]},
 ]

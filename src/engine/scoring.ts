@@ -1,15 +1,21 @@
 import { classProfiles } from '../data/classes'
 import { questions } from '../data/questions'
 import { specs } from '../data/specs'
-import type { Answers, IndifferenceSummary, MetricKey, Question, RankedClass, RankedSpec, SpecProfile } from '../types'
+import type { Answers, IndifferenceSummary, MetricKey, Question, RadarMetricKey, RankedClass, RankedSpec, SpecProfile } from '../types'
 
 const roleLabels = { tank:'坦克', healer:'治疗', melee:'近战输出', ranged:'远程输出', support:'辅助输出' }
 const rangeLabels = { melee:'贴身近战', ranged:'远程作战', mid:'灵活中距离' }
-const metricLabels: Record<MetricKey, string> = { pace:'操作节奏', complexity:'学习深度', mobility:'机动能力', survivability:'生存容错', burst:'爆发反馈', sustained:'持续作战' }
+const metricLabels: Record<MetricKey, string> = { difficulty:'上手难度', ceiling:'操作上限', pace:'操作节奏', mobility:'机动能力', survivability:'生存容错', utility:'团队功能', burst:'爆发反馈', sustained:'持续作战' }
 const INDIFFERENCE_CLASS_THRESHOLD = .4
 
 export const getRoleLabel = (role: SpecProfile['role']) => roleLabels[role]
 export const getRangeLabel = (range: SpecProfile['range']) => rangeLabels[range]
+
+export function getClassRadar(className: string): Record<RadarMetricKey, number> {
+  const ownSpecs = specs.filter((spec) => spec.className === className)
+  const keys: RadarMetricKey[] = ['difficulty', 'ceiling', 'pace', 'mobility', 'survivability', 'utility']
+  return Object.fromEntries(keys.map((key) => [key, Number((ownSpecs.reduce((sum, spec) => sum + spec.metrics[key], 0) / ownSpecs.length).toFixed(1))])) as Record<RadarMetricKey, number>
+}
 
 export function getIndifferenceSummary(answers: Answers): IndifferenceSummary {
   const count = questions.filter((question) => answers[question.id] === 'any').length

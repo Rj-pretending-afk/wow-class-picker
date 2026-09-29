@@ -53,8 +53,27 @@ const raw: RawSpec[] = [
   ['protection-warrior','战士','防护','tank','melee',[4,4,4,5,3,5],'martial plate shield explosive','以盾牌、冲锋和怒吼正面接管战场。','物理防御扎实，冲锋与盾击带来强烈坦克反馈。','自我治疗较少，需要主动维持减伤。'],
 ]
 
+// 12.x（至暗之夜）校准：上手难度、操作上限、团队功能。
+// 评分来自 2026-09 对正式服职业指南、重做说明与当前循环的编辑评估；5 代表更多要求/更高上限/更多工具，并非强度排名。
+const skillScores: Record<string, [number, number, number]> = {
+  'blood-dk':[3,5,4], 'frost-dk':[2,4,2], 'unholy-dk':[4,5,3],
+  'havoc-dh':[3,5,3], 'vengeance-dh':[3,5,4], 'devourer-dh':[2,4,3],
+  'balance-druid':[3,4,4], 'feral-druid':[4,5,3], 'guardian-druid':[1,4,3], 'restoration-druid':[4,5,5],
+  'devastation-evoker':[2,4,3], 'preservation-evoker':[4,5,5], 'augmentation-evoker':[3,5,5],
+  'beast-mastery-hunter':[1,3,4], 'marksmanship-hunter':[2,4,3], 'survival-hunter':[3,4,4],
+  'arcane-mage':[4,5,3], 'fire-mage':[3,5,3], 'frost-mage':[2,4,4],
+  'brewmaster-monk':[4,5,5], 'mistweaver-monk':[4,5,5], 'windwalker-monk':[3,5,3],
+  'holy-paladin':[3,5,5], 'protection-paladin':[3,5,5], 'retribution-paladin':[1,4,4],
+  'discipline-priest':[5,5,5], 'holy-priest':[2,4,4], 'shadow-priest':[4,5,4],
+  'assassination-rogue':[3,5,4], 'outlaw-rogue':[4,5,4], 'subtlety-rogue':[5,5,4],
+  'elemental-shaman':[2,4,5], 'enhancement-shaman':[4,5,5], 'restoration-shaman':[3,5,5],
+  'affliction-warlock':[4,5,4], 'demonology-warlock':[3,5,4], 'destruction-warlock':[1,4,4],
+  'arms-warrior':[2,4,3], 'fury-warrior':[1,3,3], 'protection-warrior':[3,5,4],
+}
+
 export const specs: SpecProfile[] = raw.map(([id, className, specName, role, range, values, tagString, fantasy, summary, caution]) => {
   const [armor, color] = classes[className]
-  const [pace, complexity, mobility, survivability, burst, sustained] = values
-  return { id, className, specName, role, range, armor, color, metrics: { pace, complexity, mobility, survivability, burst, sustained }, tags: tagString.split(' '), fantasy, summary, caution }
+  const [pace, legacyComplexity, mobility, survivability, burst, sustained] = values
+  const [difficulty, ceiling, utility] = skillScores[id] ?? [legacyComplexity, Math.min(5, legacyComplexity + 1), 3]
+  return { id, className, specName, role, range, armor, color, metrics: { pace, difficulty, ceiling, mobility, survivability, utility, burst, sustained }, tags: tagString.split(' '), fantasy, summary, caution }
 })
