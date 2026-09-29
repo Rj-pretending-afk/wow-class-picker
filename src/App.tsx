@@ -13,6 +13,7 @@ import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey } from '.
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
+type SortDirection = 'desc' | 'asc'
 const formatMetric = (value: number) => value.toFixed(1)
 const findSpecByLabel = (label: string) => specs.find((spec) => spec.specName + spec.className === label)
 const getSpecIntro = (spec: (typeof specs)[number]) => `${spec.specName}是${getRoleLabel(spec.role)}专精，主要在${getRangeLabel(spec.range)}作战。${spec.fantasy}`
@@ -35,8 +36,7 @@ function App() {
   const [atlasClass, setAtlasClass] = useState('全部')
   const [atlasRole, setAtlasRole] = useState<Role | '全部'>('全部')
   const [atlasRange, setAtlasRange] = useState<Range | '全部'>('全部')
-  const [atlasSortMetrics, setAtlasSortMetrics] = useState<RadarMetricKey[]>([])
-  const [atlasSortDirection, setAtlasSortDirection] = useState<'desc' | 'asc'>('desc')
+  const [atlasSort, setAtlasSort] = useState<{ key: RadarMetricKey; dir: SortDirection }[]>([])
   const [atlasPick, setAtlasPick] = useState(classProfiles[1].name)
   const [sinStage, setSinStage] = useState<SinStage>('intro')
   const [sinStep, setSinStep] = useState(0)
@@ -46,23 +46,40 @@ function App() {
   const results = useMemo(() => getSpecRecommendations(answers, sessionQuestions), [answers, sessionQuestions])
   const classResults = useMemo(() => rankClasses(answers, sessionQuestions).slice(0, 5), [answers, sessionQuestions])
   const indifference = useMemo(() => getIndifferenceSummary(answers, sessionQuestions), [answers, sessionQuestions])
-  const filteredSpecs = useMemo(() => {
-    const metricScore = (spec: (typeof specs)[number]) => {
-      const keys = atlasSortMetrics.length ? atlasSortMetrics : radarMetrics.map(({ key }) => key)
-      return keys.reduce((sum, key) => sum + spec.metrics[key], 0) / keys.length
-    }
-    return specs
+  // 组合排序：每个维度按各自方向单独排名，名次相加越小越靠前；同分时按点击顺序逐项比较。
+  const { filteredSpecs, atlasRanks } = useMemo(() => {
+    const pool = specs
       .filter((spec) => atlasClass === '全部' || spec.className === atlasClass)
       .filter((spec) => atlasRole === '全部' || spec.role === atlasRole)
       .filter((spec) => atlasRange === '全部' || spec.range === atlasRange)
-      .sort((a, b) => (metricScore(a) - metricScore(b)) * (atlasSortDirection === 'asc' ? 1 : -1) || a.specName.localeCompare(b.specName, 'zh-CN'))
-  }, [atlasClass, atlasRole, atlasRange, atlasSortMetrics, atlasSortDirection])
+    const ranks = new Map<string, { total: number; overall: number; byMetric: Partial<Record<RadarMetricKey, number>> }>()
+    if (!atlasSort.length) return { filteredSpecs: pool, atlasRanks: ranks }
+    const oriented = (spec: (typeof specs)[number], key: RadarMetricKey, dir: SortDirection) => dir === 'desc' ? spec.metrics[key] : -spec.metrics[key]
+    pool.forEach((spec) => {
+      const byMetric: Partial<Record<RadarMetricKey, number>> = {}
+      atlasSort.forEach(({ key, dir }) => { byMetric[key] = 1 + pool.filter((other) => oriented(other, key, dir) > oriented(spec, key, dir)).length })
+      ranks.set(spec.id, { total: Object.values(byMetric).reduce((sum, rank) => sum + (rank ?? 0), 0), overall: 0, byMetric })
+    })
+    const sorted = [...pool].sort((a, b) => {
+      const diff = ranks.get(a.id)!.total - ranks.get(b.id)!.total
+      if (diff) return diff
+      for (const { key, dir } of atlasSort) {
+        const tie = oriented(b, key, dir) - oriented(a, key, dir)
+        if (tie) return tie
+      }
+      return 0
+    })
+    sorted.forEach((spec) => { ranks.get(spec.id)!.overall = 1 + sorted.filter((other) => ranks.get(other.id)!.total < ranks.get(spec.id)!.total).length })
+    return { filteredSpecs: sorted, atlasRanks: ranks }
+  }, [atlasClass, atlasRole, atlasRange, atlasSort])
+  const cycleAtlasSort = (key: RadarMetricKey) => setAtlasSort((current) => {
+    const found = current.find((item) => item.key === key)
+    if (!found) return [...current, { key, dir: 'desc' }]
+    if (found.dir === 'desc') return current.map((item) => item.key === key ? { key, dir: 'asc' } : item)
+    return current.filter((item) => item.key !== key)
+  })
   const pickedProfile = classProfileMap.get(atlasPick) ?? classProfiles[0]
   const sinResult = useMemo(() => [...sinProfiles].sort((a, b) => (sinScores[b.key] ?? 0) - (sinScores[a.key] ?? 0))[0], [sinScores])
-  const atlasScore = (spec: (typeof specs)[number]) => {
-    const keys = atlasSortMetrics.length ? atlasSortMetrics : radarMetrics.map(({ key }) => key)
-    return keys.reduce((sum, key) => sum + spec.metrics[key], 0) / keys.length
-  }
 
   const looksDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'looks').length
   const feelDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'feel').length
@@ -256,15 +273,20 @@ function App() {
                   <label className="class-filter">职业<select value={atlasClass} onChange={(event) => setAtlasClass(event.target.value)}><option>全部</option>{classProfiles.map((item) => <option key={item.name}>{item.name}</option>)}</select></label>
                   <label className="class-filter">职责<select value={atlasRole} onChange={(event) => setAtlasRole(event.target.value as Role | '全部')}><option>全部</option><option value="tank">坦克</option><option value="healer">治疗</option><option value="melee">近战输出</option><option value="ranged">远程输出</option><option value="support">辅助输出</option></select></label>
                   <label className="class-filter">距离<select value={atlasRange} onChange={(event) => setAtlasRange(event.target.value as Range | '全部')}><option>全部</option><option value="melee">贴身近战</option><option value="mid">中距离</option><option value="ranged">远程</option></select></label>
-                  <label className="class-filter">方向<select value={atlasSortDirection} onChange={(event) => setAtlasSortDirection(event.target.value as 'asc' | 'desc')}><option value="desc">高分优先</option><option value="asc">低分优先</option></select></label>
                 </div>
-                <div className="metric-sort-row"><span>组合排序</span><div>{radarMetrics.map(({ key, label }) => <button type="button" aria-pressed={atlasSortMetrics.includes(key)} className={atlasSortMetrics.includes(key) ? 'active' : ''} onClick={() => setAtlasSortMetrics((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} key={key}>{label}</button>)}</div><button className="reset-sort" type="button" onClick={() => { setAtlasClass('全部'); setAtlasRole('全部'); setAtlasRange('全部'); setAtlasSortMetrics([]); setAtlasSortDirection('desc') }}>重置</button></div>
-                <p className="sort-help">{atlasSortMetrics.length ? `按 ${atlasSortMetrics.map((key) => radarMetrics.find((metric) => metric.key === key)?.label).join(' + ')} 的平均分${atlasSortDirection === 'desc' ? '从高到低' : '从低到高'}排列。` : `未选择维度：按六维平均分${atlasSortDirection === 'desc' ? '从高到低' : '从低到高'}排列。选择多个维度时取等权平均。`}</p>
+                <div className="metric-sort-row"><span>组合排序</span><div>{radarMetrics.map(({ key, label }) => {
+                  const order = atlasSort.findIndex((item) => item.key === key)
+                  const dir = order >= 0 ? atlasSort[order].dir : null
+                  const state = dir === 'desc' ? '高分优先' : dir === 'asc' ? '低分优先' : '不排序'
+                  return <button type="button" className={dir ? `sort-${dir}` : ''} aria-label={`${label}：${state}，点击切换`} title={`${label} · ${state}`} onClick={() => cycleAtlasSort(key)} key={key}>{label}{dir && <b aria-hidden="true">{dir === 'desc' ? '↑' : '↓'}</b>}{dir && atlasSort.length > 1 && <i aria-hidden="true">{order + 1}</i>}</button>
+                })}</div><button className="reset-sort" type="button" onClick={() => { setAtlasClass('全部'); setAtlasRole('全部'); setAtlasRange('全部'); setAtlasSort([]) }}>重置</button></div>
+                <p className="sort-help" aria-live="polite">{atlasSort.length ? `${atlasSort.map(({ key, dir }) => `${radarMetrics.find((metric) => metric.key === key)?.label}${dir === 'desc' ? '高' : '低'}`).join(' + ')}：每项在当前结果里单独排名，名次相加越小越靠前；名次和相同时按点击顺序比较。` : '点击维度切换：↑ 高分优先 → ↓ 低分优先 → 不排序。可以组合多个维度，每个维度方向独立。'}</p>
               </div>
               <div className="atlas-grid">
                 {filteredSpecs.map((spec) => (
                   <article className="atlas-card" key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
-                    <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}<b className="sort-score">排序分 {formatMetric(atlasScore(spec))}</b></small></div>
+                    <div className="atlas-card-heading"><div className="atlas-title"><ClassIcon className={spec.className} specId={spec.id} color={spec.color} size={52} /><div><span>{spec.className}</span><h2>{spec.specName}</h2></div></div><small>{getRoleLabel(spec.role)} · {getRangeLabel(spec.range)}{atlasRanks.get(spec.id) && <b className="sort-score">综合第 {atlasRanks.get(spec.id)!.overall}</b>}</small></div>
+                    {atlasRanks.get(spec.id) && <div className="sort-breakdown">{atlasSort.map(({ key, dir }) => <span className={`sort-${dir}`} key={key}>{radarMetrics.find((metric) => metric.key === key)?.label} {dir === 'desc' ? '↑' : '↓'} {formatMetric(spec.metrics[key])}<em>第 {atlasRanks.get(spec.id)!.byMetric[key]}</em></span>)}</div>}
                     <p>{getSpecIntro(spec)}</p>
                     <ProsCons strengths={spec.strengths} weaknesses={spec.weaknesses} />
                     <RadarChart values={spec.metrics} color={spec.color} label={`${spec.className}${spec.specName}`} />

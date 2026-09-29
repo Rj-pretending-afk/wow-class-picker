@@ -229,7 +229,17 @@ footer { border-top:1px solid #221d33; min-height:64px; display:flex; align-item
 .metric-sort-row > span { color:var(--muted); font-size:13px; }
 .metric-sort-row > div { display:flex; flex-wrap:wrap; gap:8px; }
 .metric-sort-row button { min-height:36px; padding:0 13px; border:1px solid #3a3350; border-radius:18px; color:var(--body); background:rgba(11,9,18,.42); cursor:pointer; }
-.metric-sort-row button.active { color:#1a1206; border-color:var(--gold); background:var(--gold); font-weight:700; }
+.metric-sort-row button { display:inline-flex; align-items:center; gap:6px; }
+.metric-sort-row button b { font-size:15px; line-height:1; }
+.metric-sort-row button i { min-width:16px; height:16px; border-radius:8px; display:inline-grid; place-items:center; font:700 10px/1 'RjDark',sans-serif; font-style:normal; background:rgba(11,9,18,.28); }
+.metric-sort-row button.sort-desc { color:#1a1206; border-color:var(--gold); background:var(--gold); font-weight:700; }
+.metric-sort-row button.sort-asc { color:#f4f0ff; border-color:var(--void); background:rgba(107,79,208,.55); font-weight:700; }
+.metric-sort-row button.sort-asc i { background:rgba(255,255,255,.16); }
+.sort-breakdown { display:flex; flex-wrap:wrap; gap:6px; margin:-4px 0 12px; }
+.sort-breakdown span { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:12px; font-size:12px; border:1px solid; }
+.sort-breakdown .sort-desc { color:var(--gold-soft); border-color:rgba(232,183,92,.35); background:rgba(232,183,92,.08); }
+.sort-breakdown .sort-asc { color:var(--void-soft); border-color:rgba(155,124,242,.4); background:rgba(155,124,242,.1); }
+.sort-breakdown em { font-style:normal; color:var(--muted); }
 .metric-sort-row .reset-sort { color:var(--gold-soft); border-color:rgba(232,183,92,.35); background:transparent; }
 .sort-help { margin:12px 0 0; color:var(--dim); font-size:12px; line-height:1.7; }
 .sort-score { display:block; margin-top:6px; color:var(--gold-soft); font:12px 'RjDark',Georgia,serif; letter-spacing:.04em; }
