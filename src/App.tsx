@@ -35,7 +35,7 @@ function App() {
   const [sessionSinQuestions, setSessionSinQuestions] = useState(createSinQuestionSet)
   const question = sessionQuestions[step]
   const results = useMemo(() => getSpecRecommendations(answers, sessionQuestions), [answers, sessionQuestions])
-  const classResults = useMemo(() => rankClasses(answers, sessionQuestions).slice(0, 3), [answers, sessionQuestions])
+  const classResults = useMemo(() => rankClasses(answers, sessionQuestions).slice(0, 5), [answers, sessionQuestions])
   const indifference = useMemo(() => getIndifferenceSummary(answers, sessionQuestions), [answers, sessionQuestions])
   const filteredSpecs = useMemo(() => {
     const metricScore = (spec: (typeof specs)[number]) => {
@@ -90,7 +90,7 @@ function App() {
   const classRecommendations = (
     <section className={`class-recommendations ${indifference.isHigh ? 'class-first' : ''}`}>
       <div className="section-heading">
-        <div><p className="kicker">职业推荐 · 3 个</p><h2>{indifference.isHigh ? '先从多变的职业开始' : '更适合你的职业方向'}</h2></div>
+        <div><p className="kicker">职业推荐 · 5 个</p><h2>{indifference.isHigh ? '先从多变的职业开始' : '更适合你的职业方向'}</h2></div>
         <p>{indifference.isHigh ? `你有 ${indifference.count} 题选择了“我无所谓”。比起过早锁定专精，更适合先选能切换多种玩法的职业。` : '职业推荐综合这个职业下表现最接近你的专精，并考虑它能提供多少种职责与玩法。'}</p>
       </div>
       <div className="class-grid">
@@ -121,7 +121,7 @@ function App() {
         </button>
         <nav className="top-actions" aria-label="站点导航">
           <button className="header-link" type="button" onClick={screen === 'atlas' ? begin : openAtlas}>{screen === 'atlas' ? '开始测试' : '全专精评分'}</button>
-          <span className="version">正式服 · 至暗之夜 12.x</span>
+          <span className="version">正式服 · 至暗之夜 12.1</span>
           <button className="egg-button" type="button" onClick={openEaster} aria-label="打开隐藏的七宗罪测试">VII</button>
         </nav>
       </header>
@@ -132,7 +132,7 @@ function App() {
             <div className="intro-copy">
               <p className="axis-kicker"><span className="looks">颜值</span><i /><b>×</b><i /><span className="feel">手感</span><em>双轴匹配</em></p>
               <h1>坐牢，<br /><em>坐最爱的牢。</em></h1>
-              <p className="lede">13 个固定方向分别从自己的题池抽 1 题（共 {questions.length} 题），所有偏好都可按顺序多选；最后给出 6 个专精与 3 个职业方向。</p>
+              <p className="lede">13 个固定方向分别从自己的题池抽 1 题（共 {questions.length} 题），所有偏好都可按顺序多选；最后给出 10 个专精与 5 个职业方向。</p>
               <div className="hero-actions">
                 <button className="hero-button" type="button" onClick={begin}>开始测试 <span>约 2 分钟</span></button>
                 <button className="text-button" type="button" onClick={openAtlas}>先看职业图鉴</button>
@@ -186,7 +186,7 @@ function App() {
             {indifference.isHigh && classRecommendations}
 
             <div className="section-heading spec-heading">
-              <div><p className="kicker">专精推荐 · 6 个</p><h2>{indifference.isHigh ? '可以优先试玩的专精' : '你的专精倾向'}</h2></div>
+              <div><p className="kicker">专精推荐 · 10 个</p><h2>{indifference.isHigh ? '可以优先试玩的专精' : '你的专精倾向'}</h2></div>
               <p>所有专精全局按契合百分比排序，同一职业可以出现 0—4 个；不会为了职业多样性打乱名次。</p>
             </div>
 
@@ -207,7 +207,7 @@ function App() {
               <RadarChart values={results[0].metrics} color={results[0].color} label={`${results[0].className}${results[0].specName}`} />
             </article>
 
-            <div className="alternatives-heading"><span>另外 5 个相近专精</span><small>02—06 · 按百分比降序</small></div>
+            <div className="alternatives-heading"><span>另外 9 个相近专精</span><small>02—10 · 按百分比降序</small></div>
             <div className="alternatives">
               {results.slice(1).map((spec, index) => (
                 <button className="alternative-card" type="button" onClick={() => setSelected(spec)} key={spec.id} style={{ '--class-color': spec.color } as React.CSSProperties}>
@@ -228,7 +228,7 @@ function App() {
         {screen === 'atlas' && (
           <section className="atlas-screen">
             <div className="atlas-heading">
-              <div><p className="kicker">至暗之夜 12.x · 体验档案</p><h1>全天赋六维评分</h1></div>
+              <div><p className="kicker">至暗之夜 12.1 · 体验档案</p><h1>全天赋六维评分</h1></div>
               <p>数值采用 0.0 至 9.0 的九分制，并细分到 0.1。9.0 表示要求更多、上限更高或能力更强，不代表当前版本输出强度。</p>
             </div>
             <div className="atlas-toolbar">
@@ -281,7 +281,7 @@ function App() {
                 </article>
               </div>
             )}
-            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.0.5。六维分数与手感标签综合官方改动、当前专精指南和玩家实战讨论逐项校准；背景考据只影响颜值题，发生冲突时以当前游戏体验为准。本页不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24229031" target="_blank" rel="noreferrer">暴雪：Midnight 更新汇总</a><a href="https://www.icy-veins.com/wow/class-guides" target="_blank" rel="noreferrer">Icy Veins：12.0.5 职业指南</a><a href="https://www.wowhead.com/news/class-guides-now-updated-for-patch-12-0-5-bonus-rolls-and-voidcore-upgrades-381310" target="_blank" rel="noreferrer">Wowhead：12.0.5 指南更新</a><a href="https://www.reddit.com/r/wow/comments/1tk9be5/how_would_you_rank_the_difficulty_of_specs_youve/" target="_blank" rel="noreferrer">社区：Midnight 专精难度讨论</a></div></aside>
+            <aside className="source-note"><strong>资料口径</strong><p>2026-09 复核正式服 12.1。六维分数与手感标签综合官方改动、当前专精指南和玩家实战讨论逐项校准；只记录玩法体验，不追随短期数值强弱。背景考据只影响颜值题，发生冲突时以当前游戏体验为准。本页不是 DPS、治疗量或竞技强度排名。</p><div><a href="https://worldofwarcraft.blizzard.com/en-us/news/24293281/curse-of-ulatek-content-update-notes" target="_blank" rel="noreferrer">暴雪：12.1 更新说明</a><a href="https://www.wowhead.com/news/patch-12-1-guide-compendium-every-guide-you-ll-need-for-season-2-382408" target="_blank" rel="noreferrer">Wowhead：12.1 指南汇总</a><a href="https://www.icy-veins.com/wow/choose-your-main-guide" target="_blank" rel="noreferrer">Icy Veins：12.1 主职业指南</a><a href="https://www.reddit.com/r/wow/comments/1ua1oq4/opinions_of_the_class_changes_in_121/" target="_blank" rel="noreferrer">社区：12.1 职业改动体验</a></div></aside>
           </section>
         )}
 
@@ -308,7 +308,7 @@ function App() {
         )}
       </main>
 
-      <footer><span>职业罗盘 · P2</span><span>资料基于正式服《至暗之夜》12.x · 2026-09 校准 · 不构成强度排名</span></footer>
+      <footer><span>职业罗盘 · P2</span><span>资料基于正式服《至暗之夜》12.1 · 2026-09 校准 · 不构成强度排名</span></footer>
 
       {selected && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>

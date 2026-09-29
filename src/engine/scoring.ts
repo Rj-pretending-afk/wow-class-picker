@@ -117,6 +117,6 @@ export function rankClasses(answers: Answers, activeQuestions: Question[]): Rank
   }).sort((a, b) => b.match - a.match || b.versatility - a.versatility)
 }
 
-export function getSpecRecommendations(answers: Answers, activeQuestions: Question[], limit = 6): RankedSpec[] {
+export function getSpecRecommendations(answers: Answers, activeQuestions: Question[], limit = 10): RankedSpec[] {
   return rankSpecs(answers, activeQuestions).slice(0, limit)
 }

@@ -115,7 +115,7 @@ h1 em { color:var(--gold); font-style:normal; }
 .indifference-banner span { color:var(--muted); font-size:13px; text-align:right; }
 .class-recommendations { margin:26px 0 60px; }
 .class-recommendations.class-first { margin-top:0; }
-.class-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
+.class-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:24px; }
 .class-card { --class-color:#fff; border-radius:20px; padding:28px; display:flex; flex-direction:column; gap:14px; }
 .class-card-top { display:flex; justify-content:space-between; align-items:center; }
 .class-card-title { display:flex; align-items:center; gap:14px; }

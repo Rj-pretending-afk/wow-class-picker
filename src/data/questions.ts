@@ -75,7 +75,7 @@ const questionBank: Question[] = [
     { id:'damage', label:'专注输出', hint:'近战或远程都可以', effect:{ roles:['melee','ranged'] } },
     { id:'support', label:'强化团队', hint:'放大队友表现，并在关键时刻补位', effect:{ roles:['support'], tags:['support'] } },
   ]},
-  { id:'difficulty', category:'feel', slot:9, group:'上手门槛', required:true, eyebrow:'手感 · 上手难度', title:'你希望多快进入“会玩”的状态？', description:'这里说的是 12.x 核心循环的入门门槛，不是职业强度。', options:[
+  { id:'difficulty', category:'feel', slot:9, group:'上手门槛', required:true, eyebrow:'手感 · 上手难度', title:'你希望多快进入“会玩”的状态？', description:'这里说的是 12.1 核心循环的入门门槛，不是职业强度。', options:[
     { id:'easy', label:'十分钟就能开打', hint:'规则直观，失误后容易修正', effect:{ metrics:{ difficulty:1.8 } } },
     { id:'learn', label:'愿意练一两个晚上', hint:'先学优先级，再逐步理解细节', effect:{ metrics:{ difficulty:5.0 } } },
     { id:'hard', label:'难一点才有成就感', hint:'接受更高起步门槛与同时决策', effect:{ metrics:{ difficulty:8.2 } } },
@@ -186,7 +186,7 @@ const questionBank: Question[] = [
     { id:'constant', label:'从头到尾稳定忙碌', hint:'持续压制、较少明显停顿', effect:{ metrics:{ sustained:8.7, pace:7.8 } } },
     { id:'adaptive', label:'根据触发临场变速', hint:'平时稳定，亮灯时迅速加速', effect:{ metrics:{ pace:7.3, ceiling:7.6 } } },
   ]},
-  { id:'first-night', category:'feel', slot:9, group:'上手门槛', eyebrow:'手感 · 第一晚体验', title:'换到一个新专精的第一晚，你期待什么？', description:'按 12.x 当前技能与循环理解成本判断。', options:[
+  { id:'first-night', category:'feel', slot:9, group:'上手门槛', eyebrow:'手感 · 第一晚体验', title:'换到一个新专精的第一晚，你期待什么？', description:'按 12.1 当前技能与循环理解成本判断。', options:[
     { id:'immediate', label:'不看攻略也能打得像样', hint:'核心技能关系一眼能懂', effect:{ metrics:{ difficulty:2.0 } } },
     { id:'guide', label:'看一篇指南就能建立循环', hint:'允许少量资源和窗口规则', effect:{ metrics:{ difficulty:5.0 } } },
     { id:'study', label:'愿意查表、练木桩再进本', hint:'复杂规则本身就是乐趣', effect:{ metrics:{ difficulty:8.2 } } },

@@ -16,11 +16,11 @@ const raw: RawSpec[] = [
   ['unholy-dk','死亡骑士','邪恶','melee','melee',[4,4,1,4,4,5],'dark plague plate twohand pet dot','散播瘟疫并指挥亡灵军团的黑暗统帅。','宠物、疾病与召唤物层层叠加，持续压迫感很强。','需要同时照看疾病、资源和召唤窗口。'],
   ['havoc-dh','恶魔猎手','浩劫','melee','melee',[5,3,5,3,5,4],'fel dark agile dual transform explosive','以战刃、邪能与恶魔变形撕开战场。','位移丰富、节奏迅疾，技能视觉冲击力很强。','高速位移也容易把自己送进危险位置。'],
   ['vengeance-dh','恶魔猎手','复仇','tank','melee',[4,3,5,4,4,4],'fel dark agile dual transform selfheal','化身邪能壁垒，以灵魂碎片修复创伤。','坦克中非常灵活，聚怪、跳跃和自疗体验鲜明。','防御依赖技能覆盖，空档期需要提前规划。'],
-  ['devourer-dh','恶魔猎手','噬灭','ranged','mid',[4,3,5,3,5,4],'void dark agile dual transform explosive','驾驭虚空、收割灵魂的中距离施法者。','保留恶魔猎手机动性，以虚空光束和灵魂循环输出。','中距离站位与近战派生玩法需要适应。'],
+  ['devourer-dh','恶魔猎手','噬灭','ranged','mid',[4,3,5,3,5,4],'void dark agile dual transform explosive','驾驭虚空、收割灵魂的中距离施法者。','主循环直观、机动性高，深度集中在虚空恶魔形态的资源与窗口安排。','中距离站位容易上手，但想压榨形态收益仍需规划。'],
   ['balance-druid','德鲁伊','平衡','ranged','ranged',[3,4,4,3,4,5],'nature arcane shape staff dot radiant','借日月星辰之力施放自然与奥术法术。','远程多目标能力突出，星界法术辨识度极高。','常驻形态会遮挡部分角色幻化。'],
   ['feral-druid','德鲁伊','野性','melee','melee',[5,5,5,3,3,5],'nature agile shape dot subtle','化身猎豹，以流血与撕咬猎杀目标。','潜行、机动与持续流血组成独特的猫德节奏。','资源和流血监控较多，战斗时看不到常规幻化。'],
   ['guardian-druid','德鲁伊','守护','tank','melee',[3,2,4,5,2,5],'nature shape selfheal subtle','化身巨熊，以自然韧性守住阵线。','直观耐打，适合第一次尝试坦克。','熊形态覆盖幻化，核心循环变化相对少。'],
-  ['restoration-druid','德鲁伊','恢复','healer','ranged',[4,5,5,3,2,5],'nature shape staff dot radiant','让生命之花提前在队友身上绽放。','移动施法与持续治疗优秀，擅长预判伤害。','需要提前铺设治疗，临时救急较考验判断。'],
+  ['restoration-druid','德鲁伊','恢复','healer','ranged',[4,5,5,3,2,5],'nature shape staff dot radiant','让生命之花提前在队友身上绽放。','移动施法与持续治疗优秀；12.1 的树人和迅捷治愈调整让常用构筑更直接。','仍需要提前铺设治疗，临时救急较考验判断。'],
   ['devastation-evoker','唤魔师','湮灭','ranged','mid',[4,3,5,3,5,3],'dragon elemental shape staff explosive radiant','汇聚红蓝龙焰，以蓄力法术扫过战场。','蓄力施法和龙族位移带来短促有力的节奏。','射程比多数远程短，战斗形态固定。'],
   ['preservation-evoker','唤魔师','恩护','healer','mid',[4,5,5,3,4,4],'dragon nature arcane shape staff radiant','用生命与时间魔法逆转队友的伤势。','机动、爆发治疗和回溯机制都很有创造性。','短射程和站位方向要求较高。'],
   ['augmentation-evoker','唤魔师','增辉','support','mid',[3,5,5,3,3,5],'dragon arcane shape staff support radiant','以黑铜龙之力放大队友的高光时刻。','独特辅助输出，价值来自强化队友与协调窗口。','个人伤害反馈较弱，表现依赖团队节奏。'],
@@ -36,7 +36,7 @@ const raw: RawSpec[] = [
   ['holy-paladin','圣骑士','神圣','healer','mid',[4,4,3,5,4,4],'light plate shield radiant selfheal','身披板甲，在前线用圣光挽救盟友。','硬朗、近战感强，爆发治疗与团队保护可靠。','需要靠近战场核心，站位比传统远程治疗紧张。'],
   ['protection-paladin','圣骑士','防护','tank','melee',[4,4,3,5,4,5],'light plate shield radiant selfheal support','举盾立于圣光之中，用祝福保护整支队伍。','打断、辅助和自疗工具丰富，盾牌反馈鲜明。','工具很多，需要知道何时把祝福交给队友。'],
   ['retribution-paladin','圣骑士','惩戒','melee','melee',[3,2,3,5,5,4],'light plate twohand radiant explosive','挥动双手武器，以圣光裁决敌人。','上手直接、爆发清楚，技能光效与重甲都很醒目。','机动性一般，远离目标时输出手段有限。'],
-  ['discipline-priest','牧师','戒律','healer','ranged',[4,5,3,2,5,4],'light shadow robe staff radiant support','平衡光影，通过伤害为队友提供救赎。','预铺减伤后边输出边治疗，掌控时间轴时成就感极强。','非常依赖预判，错过准备窗口会较被动。'],
+  ['discipline-priest','牧师','戒律','healer','ranged',[4,5,3,2,5,4],'light shadow robe staff radiant support','平衡光影，通过伤害为队友提供救赎。','12.1 降低随机触发依赖，但预铺减伤、输出转治疗的核心仍保留。','依然看重时间轴预判，错过准备窗口会较被动。'],
   ['holy-priest','牧师','神圣','healer','ranged',[3,2,2,2,4,4],'light robe staff radiant','最纯粹的圣光治疗者，用神圣法术回应危机。','治疗工具直观全面，适合从传统治疗逻辑入门。','机动和个人减伤偏弱，需要提前选好位置。'],
   ['shadow-priest','牧师','暗影','ranged','ranged',[4,5,3,3,4,5],'void shadow robe staff dot dark','让虚空低语与持续折磨侵蚀敌人。','暗影视觉浓烈，多目标持续伤害与资源管理很有层次。','需要管理持续效果，移动时的输出规划较重要。'],
   ['assassination-rogue','潜行者','奇袭','melee','melee',[4,4,5,3,4,5],'martial dark agile dual dot subtle','以毒药和流血让目标悄无声息地倒下。','持续伤害有条理，潜行开场和毒刃主题统一。','需要维护多个持续效果，转火成本较明显。'],
@@ -48,27 +48,27 @@ const raw: RawSpec[] = [
   ['affliction-warlock','术士','痛苦','ranged','ranged',[3,5,2,5,2,5],'shadow dark robe staff pet dot','以诅咒和灵魂腐蚀拖垮成群敌人。','持续伤害层层累积，多目标经营感很强。','目标切换和持续效果管理需要耐心。'],
   ['demonology-warlock','术士','恶魔学识','ranged','ranged',[4,4,2,5,5,4],'fel dark robe staff pet explosive','召来一支恶魔军团，再让它们同时扑向目标。','召唤物数量与爆发场面非常有满足感。','读条和宠物路径会限制即时移动。'],
   ['destruction-warlock','术士','毁灭','ranged','ranged',[2,2,2,5,5,3],'fire fel dark robe staff explosive','积攒灵魂碎片，投出沉重的混乱之箭。','节奏稳、单发反馈重，是大法术爱好者的经典选择。','读条较多，频繁移动会打断输出节奏。'],
-  ['arms-warrior','战士','武器','melee','melee',[3,3,4,4,5,3],'martial plate twohand explosive subtle','以精准、沉重的双手武器打击结束战斗。','每一下都很有重量，爆发与斩杀阶段反馈鲜明。','资源低谷时会出现短暂等待。'],
+  ['arms-warrior','战士','武器','melee','melee',[3,3,4,4,5,3],'martial plate twohand explosive subtle','以精准、沉重的双手武器打击结束战斗。','12.1 仍是基础循环直观、短窗口清楚的重击型近战。','资源低谷与技能空档是刻意保留的节奏。'],
   ['fury-warrior','战士','狂怒','melee','melee',[5,2,4,4,4,5],'martial plate dual explosive','双持巨型武器，以永不停歇的攻击宣泄怒气。','简单直接、速度极快，持续砍击几乎没有空拍。','按键频率很高，长期游玩可能较累。'],
   ['protection-warrior','战士','防护','tank','melee',[4,4,4,5,3,5],'martial plate shield explosive','以盾牌、冲锋和怒吼正面接管战场。','物理防御扎实，冲锋与盾击带来强烈坦克反馈。','自我治疗较少，需要主动维持减伤。'],
 ]
 
-// 12.x 六维人工校准：[上手难度, 操作上限, 操作节奏, 机动, 生存, 团队功能]。
+// 12.1 六维人工校准：[上手难度, 操作上限, 操作节奏, 机动, 生存, 团队功能]。
 // 综合官方重做目标、当前指南与玩家实战讨论，保留一位小数并主动拉开分布；它描述体验而非版本强度。
 const sixAxisRatings: Record<string, [number, number, number, number, number, number]> = {
   'blood-dk':[6.6,8.3,6.2,2.4,8.6,7.7], 'frost-dk':[4.4,7.0,7.1,2.3,7.3,4.8], 'unholy-dk':[6.8,8.0,6.8,2.5,7.2,5.4],
-  'havoc-dh':[5.8,8.1,8.4,9.0,6.0,5.2], 'vengeance-dh':[6.0,8.2,7.4,8.8,7.8,7.5], 'devourer-dh':[7.2,8.7,7.1,8.5,6.6,5.7],
-  'balance-druid':[5.7,7.7,5.8,7.0,5.8,7.3], 'feral-druid':[7.1,8.5,8.1,8.5,5.7,5.2], 'guardian-druid':[4.5,6.8,5.8,6.7,8.1,6.2], 'restoration-druid':[7.0,8.8,7.5,8.7,5.9,8.5],
+  'havoc-dh':[5.8,8.1,8.4,9.0,6.0,5.2], 'vengeance-dh':[6.0,8.2,7.4,8.8,7.8,7.5], 'devourer-dh':[4.8,8.0,6.8,8.5,6.6,6.4],
+  'balance-druid':[5.7,7.7,5.8,7.0,5.8,7.3], 'feral-druid':[7.1,8.5,8.1,8.5,5.7,5.2], 'guardian-druid':[4.5,6.8,5.8,6.7,8.1,6.2], 'restoration-druid':[6.3,8.5,7.3,8.7,5.9,8.5],
   'devastation-evoker':[4.6,7.2,6.8,8.4,5.8,5.9], 'preservation-evoker':[7.4,8.9,7.5,8.5,5.9,8.7], 'augmentation-evoker':[6.3,8.5,6.0,8.2,6.0,9.0],
   'beast-mastery-hunter':[2.3,5.7,6.9,9.0,6.6,6.5], 'marksmanship-hunter':[4.0,6.6,5.4,5.0,5.4,5.9], 'survival-hunter':[3.8,6.8,7.5,8.6,6.4,7.0],
-  'arcane-mage':[7.3,8.8,5.6,6.8,4.9,7.1], 'fire-mage':[6.0,8.5,8.3,8.7,4.7,6.8], 'frost-mage':[4.5,7.2,6.7,7.8,5.5,7.4],
+  'arcane-mage':[7.0,8.7,6.0,6.8,4.9,7.1], 'fire-mage':[6.0,8.5,8.3,8.7,4.7,6.8], 'frost-mage':[4.5,7.2,6.7,7.8,5.5,7.4],
   'brewmaster-monk':[3.9,7.4,7.2,8.3,8.4,8.3], 'mistweaver-monk':[7.2,8.8,8.0,8.5,5.8,8.4], 'windwalker-monk':[5.9,8.0,8.2,8.8,5.8,6.0],
   'holy-paladin':[6.2,8.6,6.8,5.5,8.0,8.8], 'protection-paladin':[5.8,8.4,7.1,5.3,8.5,9.0], 'retribution-paladin':[2.9,6.6,5.8,5.1,7.8,7.5],
-  'discipline-priest':[8.0,9.0,7.2,5.6,4.8,8.8], 'holy-priest':[4.1,7.1,5.2,3.8,4.4,8.1], 'shadow-priest':[7.8,8.7,6.8,5.4,5.2,7.5],
+  'discipline-priest':[7.4,8.8,7.0,5.6,4.8,8.8], 'holy-priest':[4.1,7.1,5.2,3.8,4.4,8.1], 'shadow-priest':[7.8,8.7,6.8,5.4,5.2,7.5],
   'assassination-rogue':[4.3,7.2,6.5,8.0,5.9,7.4], 'outlaw-rogue':[5.2,7.8,8.7,8.5,5.8,7.6], 'subtlety-rogue':[7.2,8.7,8.2,8.5,5.8,7.5],
   'elemental-shaman':[4.3,7.3,6.1,5.9,6.0,8.0], 'enhancement-shaman':[8.2,8.9,9.0,7.4,5.9,8.0], 'restoration-shaman':[5.8,8.2,5.9,5.5,6.7,9.0],
   'affliction-warlock':[4.5,7.2,5.8,4.0,8.3,7.5], 'demonology-warlock':[3.8,6.8,6.2,4.1,8.4,7.1], 'destruction-warlock':[3.5,6.8,4.1,3.8,8.2,7.3],
-  'arms-warrior':[4.8,7.5,5.7,6.8,6.8,6.2], 'fury-warrior':[2.8,6.1,8.9,7.2,6.9,5.7], 'protection-warrior':[6.1,8.5,7.2,7.5,7.8,8.0],
+  'arms-warrior':[3.7,6.8,4.9,6.8,6.8,6.2], 'fury-warrior':[2.8,6.1,8.9,7.2,6.9,5.7], 'protection-warrior':[6.1,8.5,7.2,7.5,7.8,8.0],
 }
 
 const loreTags: Record<string, string[]> = {
