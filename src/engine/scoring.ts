@@ -6,6 +6,23 @@ const roleLabels = { tank:'坦克', healer:'治疗', melee:'近战输出', range
 const rangeLabels = { melee:'贴身近战', ranged:'远程作战', mid:'灵活中距离' }
 const metricLabels: Record<MetricKey, string> = { difficulty:'上手难度', ceiling:'操作上限', pace:'操作节奏', mobility:'机动能力', survivability:'生存容错', utility:'团队功能', burst:'爆发反馈', sustained:'持续作战' }
 const INDIFFERENCE_CLASS_THRESHOLD = .4
+const QUESTION_CONTRAST = 1.12
+
+// 标签分域后，每个方向只产生一个信号。匹配再多同域标签也不会重复加分，
+// 也不会再出现“弓枪”仅因同属武技就高分匹配近战专精的情况。
+const tagDomains: Record<string, string> = {
+  light:'power', void:'power', shadow:'power', dark:'power', arcane:'power', order:'power', fel:'power',
+  life:'power', nature:'power', death:'power', blood:'power', plague:'power', fire:'power', frost:'power',
+  water:'power', earth:'power', air:'power', storm:'power', spirit:'power', elemental:'power', time:'power',
+  'dragon-red':'power', 'dragon-blue':'power', 'dragon-green':'power', 'dragon-bronze':'power', 'dragon-black':'power',
+  plate:'silhouette', robe:'silhouette', shape:'silhouette', transform:'silhouette', dragon:'silhouette',
+  twohand:'weapon', dual:'weapon', shield:'weapon', rangedweapon:'weapon', staff:'weapon',
+  martial:'presentation', agile:'presentation', subtle:'presentation', radiant:'presentation', explosive:'presentation',
+  pet:'companion', 'pet-army':'companion', 'pet-partner':'companion', 'no-pet':'companion',
+  dot:'mechanic', support:'mechanic', selfheal:'mechanic',
+}
+
+const getTagDomain = (tag: string) => tag.startsWith('weapon-') ? 'weapon' : tagDomains[tag] ?? 'theme'
 
 export const getRoleLabel = (role: SpecProfile['role']) => roleLabels[role]
 export const getRangeLabel = (range: SpecProfile['range']) => rangeLabels[range]
@@ -26,13 +43,20 @@ export function getIndifferenceSummary(answers: Answers, activeQuestions: Questi
 function questionFit(spec: SpecProfile, question: Question, optionIds: string[]) {
   const concrete = optionIds.filter((optionId) => optionId !== 'any')
   if (!concrete.length) return { fit: 0, reasons: [] as string[], ignored: true }
-  const results = concrete.map((optionId) => optionFit(spec, question, optionId)).filter((result) => !result.ignored)
+  const results = concrete.map((optionId) => rawOptionFit(spec, question, optionId)).filter((result) => !result.ignored)
   if (!results.length) return { fit: 0, reasons: [] as string[], ignored: true }
   // 点击顺序就是偏好顺序：每后一项权重衰减到前一项的 62%，再归一化。
   // 两项约为 62% / 38%，三项约为 50% / 31% / 19%，既表达优先级，也不让次选失去意义。
   const weighted = results.map((result, index) => ({ ...result, weight:Math.pow(.62, index) }))
   const totalWeight = weighted.reduce((sum, result) => sum + result.weight, 0)
-  const fit = weighted.reduce((sum, result) => sum + result.fit * result.weight, 0) / totalWeight
+  const rawFit = weighted.reduce((sum, result) => sum + result.fit * result.weight, 0) / totalWeight
+  const baselineResults = question.options
+    .filter((option) => option.id !== 'any')
+    .map((option) => rawOptionFit(spec, question, option.id))
+    .filter((result) => !result.ignored)
+  const baseline = baselineResults.length ? baselineResults.reduce((sum, result) => sum + result.fit, 0) / baselineResults.length : .5
+  // 每个专精面对随机答案时，本题期望值都回到 0.5；只奖励“比它自身随机基线更契合”的选择。
+  const fit = Math.max(.05, Math.min(.98, .5 + (rawFit - baseline) * QUESTION_CONTRAST))
   const reasons = weighted
     .filter((result) => result.fit >= .72 && result.reason)
     .sort((a, b) => b.fit * b.weight - a.fit * a.weight)
@@ -40,7 +64,7 @@ function questionFit(spec: SpecProfile, question: Question, optionIds: string[])
   return { fit, reasons, ignored: false }
 }
 
-function optionFit(spec: SpecProfile, question: Question, optionId: string) {
+function rawOptionFit(spec: SpecProfile, question: Question, optionId: string) {
   if (optionId === 'any') return { fit: 0, reason: '', ignored: true }
   const option = question.options.find((item) => item.id === optionId)
   if (!option) return { fit: 0, reason: '', ignored: true }
@@ -59,9 +83,18 @@ function optionFit(spec: SpecProfile, question: Question, optionId: string) {
     if (matches) reason = `${getRangeLabel(spec.range)}正合你的站位偏好`
   }
   if (effect.tags?.length) {
-    const matched = effect.tags.filter((tag) => spec.tags.includes(tag)).length
-    signals.push(matched ? Math.min(1, .72 + matched * .12) : .12)
-    if (matched) reason = `专精主题与你选择的「${option.label}」相近`
+    const byDomain = new Map<string, string[]>()
+    effect.tags.forEach((tag) => {
+      const domain = getTagDomain(tag)
+      byDomain.set(domain, [...(byDomain.get(domain) ?? []), tag])
+    })
+    byDomain.forEach((tags, domain) => {
+      const matched = tags.some((tag) => spec.tags.includes(tag))
+      signals.push(matched ? 1 : .1)
+      if (matched) reason = domain === 'weapon'
+        ? `武器幻想与你选择的「${option.label}」一致`
+        : `专精主题与你选择的「${option.label}」相近`
+    })
   }
   Object.entries(effect.metrics ?? {}).forEach(([key, target]) => {
     const metric = key as MetricKey

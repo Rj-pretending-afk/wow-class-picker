@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "audit:scoring": "node scripts/audit-scoring.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

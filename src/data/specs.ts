@@ -91,6 +91,24 @@ const gameplayTags: Record<string, string[]> = {
   'beast-mastery-hunter':['pet-partner'], 'survival-hunter':['pet-partner'],
 }
 
+// 武器幻想描述专精战斗时的主要视觉身份，不穷举职业可以装备的每一件物品。
+// 它与力量来源、护甲轮廓和动作特效分域计分，避免“会武技”被误算成“使用弓枪”。
+const weaponFantasyTags: Record<string, string[]> = {
+  'blood-dk':['weapon-heavy'], 'frost-dk':['weapon-heavy','weapon-dual'], 'unholy-dk':['weapon-heavy'],
+  'havoc-dh':['weapon-glaive'], 'vengeance-dh':['weapon-glaive'], 'devourer-dh':['weapon-glaive','weapon-caster'],
+  'balance-druid':['weapon-caster'], 'feral-druid':['weapon-body'], 'guardian-druid':['weapon-body'], 'restoration-druid':['weapon-caster'],
+  'devastation-evoker':['weapon-body','weapon-caster'], 'preservation-evoker':['weapon-body','weapon-caster'], 'augmentation-evoker':['weapon-body','weapon-caster'],
+  'beast-mastery-hunter':['weapon-ranged'], 'marksmanship-hunter':['weapon-ranged'], 'survival-hunter':['weapon-polearm'],
+  'arcane-mage':['weapon-caster'], 'fire-mage':['weapon-caster'], 'frost-mage':['weapon-caster'],
+  'brewmaster-monk':['weapon-polearm','weapon-unarmed'], 'mistweaver-monk':['weapon-caster','weapon-unarmed'], 'windwalker-monk':['weapon-unarmed'],
+  'holy-paladin':['weapon-shield','weapon-caster'], 'protection-paladin':['weapon-shield'], 'retribution-paladin':['weapon-heavy'],
+  'discipline-priest':['weapon-caster'], 'holy-priest':['weapon-caster'], 'shadow-priest':['weapon-caster'],
+  'assassination-rogue':['weapon-dagger'], 'outlaw-rogue':['weapon-dual'], 'subtlety-rogue':['weapon-dagger'],
+  'elemental-shaman':['weapon-shield','weapon-caster'], 'enhancement-shaman':['weapon-dual'], 'restoration-shaman':['weapon-shield','weapon-caster'],
+  'affliction-warlock':['weapon-caster'], 'demonology-warlock':['weapon-caster'], 'destruction-warlock':['weapon-caster'],
+  'arms-warrior':['weapon-heavy'], 'fury-warrior':['weapon-dual'], 'protection-warrior':['weapon-shield'],
+}
+
 const ninePointAnchors = [0, 1.5, 3.2, 5, 7.1, 9]
 const toNinePoint = (value: number) => {
   const lower = Math.max(0, Math.min(5, Math.floor(value)))
@@ -111,7 +129,7 @@ export const specs: SpecProfile[] = raw.map(([id, className, specName, role, ran
       mobility: calibratedMobility, survivability: calibratedSurvivability, utility,
       burst: toNinePoint(burst), sustained: toNinePoint(sustained),
     },
-    tags: [...new Set([...tagString.split(' '), ...(loreTags[id] ?? []), ...(gameplayTags[id] ?? []), ...(tagString.includes('pet') ? [] : ['no-pet'])])],
+    tags: [...new Set([...tagString.split(' '), ...(loreTags[id] ?? []), ...(gameplayTags[id] ?? []), ...(weaponFantasyTags[id] ?? []), ...(tagString.includes('pet') ? [] : ['no-pet'])])],
     fantasy, summary, strengths: summary, weaknesses,
   }
 })
