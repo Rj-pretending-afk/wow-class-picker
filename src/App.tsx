@@ -9,7 +9,8 @@ import { radarMetrics } from './data/radar'
 import { createSinQuestionSet, sinPairTaglines, sinProfiles, sinQuestions } from './data/sins'
 import { specs } from './data/specs'
 import { getClassRadar, getIndifferenceSummary, getRangeLabel, getRoleLabel, getSpecRecommendations, rankClasses } from './engine/scoring'
-import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinKey, SinProfile } from './types'
+import { getSinScores, rankSinClasses, rankSinSpecs } from './engine/sinScoring'
+import type { Answers, RadarMetricKey, Range, RankedSpec, Role, SinProfile } from './types'
 
 type Screen = 'start' | 'quiz' | 'result' | 'atlas' | 'easter'
 type SinStage = 'intro' | 'quiz' | 'result'
@@ -108,18 +109,8 @@ function App() {
     return current.filter((item) => item.key !== key)
   })
   const pickedProfile = classProfileMap.get(atlasPick) ?? classProfiles[0]
-  // 七宗罪：罪名分来自所选项的 scores；专精与职业推荐复用正式测试的评分引擎，数量与正式结果一致。
-  const sinScores = useMemo(() => {
-    const totals: Partial<Record<SinKey, number>> = {}
-    // 多选按点击顺序衰减（与正式测试相同的 62%），并归一化，保证每道题的罪名总分不因多选而放大。
-    sessionSinQuestions.forEach((item) => {
-      const chosen = (sinAnswers[item.id] ?? []).map((id) => item.options.find((candidate) => candidate.id === id)).filter((option) => option && option.id !== 'any')
-      const weights = chosen.map((_, index) => Math.pow(.62, index))
-      const weightSum = weights.reduce((sum, weight) => sum + weight, 0)
-      chosen.forEach((option, index) => Object.entries(option?.scores ?? {}).forEach(([key, value]) => { totals[key as SinKey] = (totals[key as SinKey] ?? 0) + Number(value) * weights[index] / weightSum }))
-    })
-    return totals
-  }, [sinAnswers, sessionSinQuestions])
+  // 七宗罪：具体题目负责 70% 玩法匹配，七罪人格比例提供 30% 稳定先验；两层都按多选顺序衰减。
+  const sinScores = useMemo(() => getSinScores(sinAnswers, sessionSinQuestions), [sinAnswers, sessionSinQuestions])
   const sinRanking = useMemo(() => {
     const total = Object.values(sinScores).reduce((sum, value) => sum + (value ?? 0), 0)
     return [...sinProfiles]
@@ -128,7 +119,7 @@ function App() {
   }, [sinScores])
   // 并列第一时同时显示多个罪名；全部选“我无所谓”时归为懒惰。
   const sinLeaders = sinRanking[0].share ? sinRanking.filter((profile) => profile.share === sinRanking[0].share).slice(0, 3) : [sinRanking.find((profile) => profile.key === 'sloth') ?? sinRanking[0]]
-  const sinSpecResults = useMemo(() => getSpecRecommendations(sinAnswers, sessionSinQuestions), [sinAnswers, sessionSinQuestions])
+  const sinSpecResults = useMemo(() => rankSinSpecs(sinAnswers, sessionSinQuestions).slice(0, 10), [sinAnswers, sessionSinQuestions])
   // 结果标语：同一份答案每次抽到同一句；另按双罪组合、纯度和首选专精追加判词。
   const sinSeed = Object.entries(sinAnswers).flatMap(([id, picks]) => [id, ...picks]).join('|').split('').reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 100003, 7)
   const sinTaglines = pickSinTaglines(sinSeed, sinLeaders, sinRanking)
@@ -150,7 +141,7 @@ function App() {
     }
     return lines
   })()
-  const sinClassResults = useMemo(() => rankClasses(sinAnswers, sessionSinQuestions).slice(0, 5), [sinAnswers, sessionSinQuestions])
+  const sinClassResults = useMemo(() => rankSinClasses(sinAnswers, sessionSinQuestions).slice(0, 5), [sinAnswers, sessionSinQuestions])
 
   const looksDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'looks').length
   const feelDone = sessionQuestions.slice(0, step).filter((item) => item.category === 'feel').length
@@ -397,7 +388,7 @@ function App() {
 
         {screen === 'easter' && (
           <section className="sin-screen">
-            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题可按顺序多选。你的脾性会被换算成玩法偏好：鉴定主罪名的同时，推荐 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
+            {sinStage === 'intro' && <div className="sin-intro"><p className="sin-mark">VII</p><p className="kicker">非官方 · 不留情面 · 不计入主测试</p><h1>艾泽拉斯<br /><em>七宗罪鉴定</em></h1><p className="lede">13 个方向各从题池抽 1 题（共 {sinQuestions.length} 份罪证），每题可按顺序多选。推荐同时参考具体答案（70%）与七罪人格比例（30%），最后给出 10 个专精与 5 个职业。</p><button className="sin-button" type="button" onClick={beginSin}>签下免责声明</button><button className="text-button" type="button" onClick={restart}>我突然良心发现</button></div>}
             {sinStage === 'quiz' && (
               <div className="sin-quiz">
                 <div className="sin-meta"><button className="text-button" type="button" onClick={goBackSin}>‹ 上一题</button></div>
@@ -428,7 +419,7 @@ function App() {
                   <h3>按你的罪性推荐的职业 · 5 个</h3>
                   <div className="sin-class-grid">{sinClassResults.map((item, index) => <div className="sin-class" key={item.name}><b>{String(index + 1).padStart(2, '0')}</b><ClassIcon className={item.name} color={item.color} size={44} /><span><strong>{item.name}</strong><small>优先体验：{item.recommendedSpecs.join(' / ')}</small></span><em>{item.match}%</em></div>)}</div>
                 </section>
-                <p className="sin-disclaimer">罪名是性格画像，不代表职业强度；推荐与正式测试使用同一套专精评分，但两边答案互不影响。</p>
+                <p className="sin-disclaimer">罪名是性格画像，不代表职业强度；专精契合度由具体答案 70% 与七罪人格 30% 联合计算，两边测试的答案完全隔离。</p>
                 <div className="result-actions"><button className="sin-button" type="button" onClick={beginSin}>重新认罪</button><button className="text-button" type="button" onClick={begin}>回归正经测试</button></div>
               </div>
             )}

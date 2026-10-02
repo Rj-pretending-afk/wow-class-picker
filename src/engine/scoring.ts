@@ -135,6 +135,11 @@ export function rankClasses(answers: Answers, activeQuestions: Question[]): Rank
   const rankedSpecs = rankSpecs(answers, activeQuestions)
   const indifference = getIndifferenceSummary(answers, activeQuestions)
 
+  return rankClassesFromSpecs(rankedSpecs, indifference)
+}
+
+export function rankClassesFromSpecs(rankedSpecs: RankedSpec[], indifference: IndifferenceSummary): RankedClass[] {
+
   return classProfiles.map((profile) => {
     const ownSpecs = rankedSpecs.filter((spec) => spec.className === profile.name).sort((a, b) => b.match - a.match)
     const topMatches = ownSpecs.slice(0, Math.min(3, ownSpecs.length))
